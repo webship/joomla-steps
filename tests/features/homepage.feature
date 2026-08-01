@@ -1,0 +1,28 @@
+Feature: Home page
+  As a visitor
+  I want the Joomla home page to load with its key content and navigation
+  So that I know the site is working before I explore further
+
+  Background:
+    Given I am on the homepage
+
+  Scenario: Home page loads with the welcome heading
+    Then I should see "Welcome to Joomla on Cassiopeia!"
+    And the breadcrumb should show "Home"
+
+  Scenario: Main menu is present
+    Then I should see the "Blog" menu item
+    And I should see the "Help" menu item
+    And I should see the "Login" menu item
+
+  Scenario: Featured article teasers are visible
+    Then I should see "Millions of Websites are built on Joomla!"
+    And I should see "We love Joomla to the moon and back!"
+    And I should see "We proudly present Joomla Version 5!"
+
+  @mobile
+  Scenario: Main menu is reachable on a mobile viewport
+    When I set the viewport to the "xs" breakpoint
+    And I open the mobile menu
+    Then I should see the "Blog" menu item
+    And I should see the "Login" menu item

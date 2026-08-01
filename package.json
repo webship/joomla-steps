@@ -1,0 +1,58 @@
+{
+  "name": "@webship/joomla-steps",
+  "version": "2.0.0",
+  "description": "Cucumber step definitions for testing Joomla sites with webship-js.",
+  "main": "tests/step-definitions/joomla.steps.js",
+  "files": [
+    "tests/step-definitions/joomla.steps.js",
+    "tests/step-definitions/joomla-admin.steps.js",
+    "tests/features",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "cucumber-js --config cucumber.js",
+    "test:chromium": "BROWSER=chromium cucumber-js --config cucumber.js",
+    "test:firefox": "BROWSER=firefox cucumber-js --config cucumber.js",
+    "test:webkit": "BROWSER=webkit cucumber-js --config cucumber.js",
+    "test:headed": "HEADLESS=false cucumber-js --config cucumber.js",
+    "generate-reports": "generate-reports"
+  },
+  "keywords": [
+    "joomla",
+    "webship-js",
+    "cucumber",
+    "cucumber-js",
+    "playwright",
+    "bdd",
+    "testing",
+    "e2e",
+    "gherkin"
+  ],
+  "author": "Webship.co",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/webship/joomla-steps.git"
+  },
+  "bugs": {
+    "url": "https://github.com/webship/joomla-steps/issues"
+  },
+  "homepage": "https://github.com/webship/joomla-steps#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">= 20.0"
+  },
+  "peerDependencies": {
+    "webship-js": "^2.0.4"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.0",
+    "webship-js": "^2.0.4"
+  },
+  "overrides": {
+    "@cucumber/cucumber": "^12"
+  }
+}
