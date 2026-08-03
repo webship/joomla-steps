@@ -4,7 +4,7 @@ Cucumber step definitions for testing Joomla sites with
 [webship-js](https://webship.co/docs/webship-js/2.0.x) — a BDD browser
 automation harness built on Playwright + Cucumber-js.
 
-`@webship/joomla-steps` adds a `joomla.steps.js` step file plus example `.feature`
+`@webship-js/joomla-steps` adds a `joomla.steps.js` step file plus example `.feature`
 files that cover the main pages of a typical Joomla install with its
 default ("blog") sample content: the home page, the blog listing,
 individual articles, menu / category navigation, and the Smart Search
@@ -12,8 +12,8 @@ individual articles, menu / category navigation, and the Smart Search
 [DDEV](https://ddev.com) and runs the suite against it on every
 push/PR — see [`.github/workflows/test.yml`](.github/workflows/test.yml).
 
-> Published to [npmjs.com](https://www.npmjs.com/package/@webship/joomla-steps)
-> as `@webship/joomla-steps`.
+> Published to [npmjs.com](https://www.npmjs.com/package/@webship-js/joomla-steps)
+> as `@webship-js/joomla-steps`.
 
 ## Requirements
 
@@ -23,18 +23,18 @@ push/PR — see [`.github/workflows/test.yml`](.github/workflows/test.yml).
 ## Install
 
 ```bash
-npm install --save-dev @webship/joomla-steps
+npm install --save-dev @webship-js/joomla-steps
 ```
 
 ## Quick start
 
-1. Add `@webship/joomla-steps`'s step files to your webship-js `cucumber.js`
+1. Add `@webship-js/joomla-steps`'s step files to your webship-js `cucumber.js`
    `require` array:
 
    ```javascript
    require: [
      'node_modules/webship-js/tests/step-definitions/**/*.js',
-     'node_modules/@webship/joomla-steps/tests/step-definitions/*.js',
+     'node_modules/@webship-js/joomla-steps/tests/step-definitions/*.js',
      'tests/step-definitions/**/*.js',
    ],
    ```
