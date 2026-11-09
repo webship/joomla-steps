@@ -194,6 +194,65 @@ When(/^(I |we )*search the site for "([^"]*)?"$/, async function (pronounCase, t
 });
 
 /**
+ * Search for a word taken from the first article on the current page (its
+ * `.item-title`), so the search is guaranteed to match content the site really
+ * has without naming any article in the feature file. The word is kept for
+ * `I should see that word in the search results`.
+ *
+ * Example #1: When I search the site for a word from the first article
+ * Example #2: When we search the site for a word from the first article
+ * Example #3: And I search the site for a word from the first article
+ *
+ */
+When(/^(I |we )*search the site for a word from the first article$/, async function (pronounCase) {
+  const title = (await this.page.locator('.item-title, .page-header h1, .page-header h2').first().innerText()).trim();
+  const word = title.split(/[^\p{L}\p{N}]+/u).filter((w) => w.length >= 4)[0] || title.split(/\s+/)[0];
+  if (!word) throw new Error('No article title on this page to take a search word from. Open a page that lists articles first.');
+  this.joomlaSearchWord = word;
+  const input = this.page.locator('.js-finder-search-query').first();
+  await actOrExplain('search the site for', word, async () => {
+    await input.waitFor({ state: 'visible', timeout: 10000 });
+    await input.fill(word);
+    await input.press('Enter');
+  });
+  await smartSettle(this.page, 1500);
+});
+
+/**
+ * Assert the Smart Search results list contains the word the previous
+ * `search the site for a word from the first article` step searched for.
+ *
+ * Example #1: Then I should see that word in the search results
+ * Example #2: And we should see that word in the search results
+ * Example #3: Then should see that word in the search results
+ *
+ */
+Then(/^(I |we )*should see that word in the search results$/, async function (pronounCase) {
+  const word = this.joomlaSearchWord;
+  if (!word) throw new Error('No search word is remembered: search the site for a word from the first article first.');
+  const text = await this.page.locator('#search-results').innerText();
+  assert.ok(text.toLowerCase().includes(word.toLowerCase()), `Search results should contain "${word}" but they contain: ${text}`);
+});
+
+/**
+ * Assert the Smart Search answered with no results: Joomla keeps the results
+ * list and prints its "no results were found" sentence (which repeats the
+ * term) instead of entries.
+ *
+ * Example #1: Then I should see no search results
+ * Example #2: And we should see no search results
+ * Example #3: Then should see no search results
+ *
+ */
+Then(/^(I |we )*should see no search results$/, async function (pronounCase) {
+  const results = this.page.locator('#search-results');
+  await results.waitFor({ state: 'attached', timeout: 10000 });
+  const text = (await results.innerText()).trim();
+  assert.ok(/no results/i.test(text) || (await results.locator('.result-item, .search-result, li').count()) === 0,
+    `Expected no search results but got: ${text.slice(0, 200)}`);
+});
+
+/**
  * Assert the Smart Search results list contains (or does not contain) an
  * entry with the given text.
  *
