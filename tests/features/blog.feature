@@ -1,3 +1,5 @@
+# The titles, menu items and paths below are those of the Joomla "blog" sample
+# data; swap them for your own content when you copy this feature.
 Feature: Blog page and articles
   As a visitor
   I want to browse the blog listing and open individual articles

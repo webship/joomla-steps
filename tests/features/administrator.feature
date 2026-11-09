@@ -4,7 +4,7 @@ Feature: Administrator login
   So that I can manage the site and be sure unauthorized logins are rejected
 
   Scenario: Log in with valid credentials
-    Given I am a logged in user with the username "admin"
+    Given I am a logged in user with the "admin" user
     Then I should see the administrator dashboard
 
   Scenario: Log in with an invalid password is rejected
@@ -13,13 +13,13 @@ Feature: Administrator login
     Then I should see an invalid login error in the administrator panel
 
   Scenario: Log out returns to the login page
-    Given I am a logged in user with the username "admin"
+    Given I am a logged in user with the "admin" user
     Then I should see the administrator dashboard
     When I log out of the administrator panel
     Then I should be on the administrator login page
 
   Scenario: A visitor with a cleared session sees the login form
-    Given I am a logged in user with the username "admin"
+    Given I am a logged in user with the "admin" user
     Then I should see the administrator dashboard
     Given I am not logged in
     Then I should be on the administrator login page

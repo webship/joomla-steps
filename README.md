@@ -67,6 +67,13 @@ npm install --save-dev @webship-js/joomla-steps
 | `tests/features/*.feature` | Reference feature files exercising the steps against a default Joomla install with sample content, desktop + mobile. |
 | `.github/workflows/test.yml` | CI: builds a default Joomla site with DDEV, then runs a dry-run + full suite against it on every push/PR. |
 
+The reference features assert the titles, menu items and paths of Joomla's
+"blog" sample data ("Welcome to Joomla on Cassiopeia!", the "Blog" and "Help"
+menu items, `/sample-layouts/category-list`, ...). That is deliberate for a
+sample-data install; when you copy a feature to your own project, swap those
+values for your site's content. The steps themselves carry no site data: every
+title, menu label and search term is a capture group.
+
 Sample content (menus, featured articles, the Smart Search module) is not
 part of a stock Joomla install — it comes from applying the "blog" sample
 data set as the Super User after installation, either through
@@ -90,20 +97,28 @@ credentials; no password needs to live in a feature file.
 | --- | --- |
 | `I open the "<name>" menu item` | When |
 | `I open the mobile menu` | When |
-| `I should see the "<name>" menu item` | Then |
+| `I should( not) see the "<name>" menu item` | Then |
 | `I read more of "<title>"` | When |
-| `I should be viewing the "<title>" article` | Then |
+| `I should( not) be viewing the "<title>" article` | Then |
 | `the breadcrumb should show "<path>"` | Then |
 | `I search the site for "<term>"` | When |
-| `I should see "<text>" in the search results` | Then |
+| `I search the site for a word from the first article` | When |
+| `I should( not) see that word in the search results` | Then |
+| `I should see no search results` | Then |
+| `I should( not) see "<text>" in the search results` | Then |
 | `I am on the administrator login page` | Given |
-| `I am a logged in user with the username "<key>"` | Given |
+| `I am a logged in user with the "<key>" user` | Given |
 | `I am not logged in` | Given |
 | `I log in to the administrator panel as "<user>" with password "<pass>"` | When |
 | `I log out of the administrator panel` | When |
-| `I should see the administrator dashboard` | Then |
-| `I should see an invalid login error in the administrator panel` | Then |
-| `I should be on the administrator login page` | Then |
+| `I should( not) see the administrator dashboard` | Then |
+| `I should( not) see an invalid login error in the administrator panel` | Then |
+| `I should( not) be on the administrator login page` | Then |
+
+Every Then step takes `should` or `should not`, every When/Then step takes
+`I`, `we` or no pronoun, and every failure is a friendly message with a hint
+(no Playwright stack). Assertions wait on their locator for the
+`minWaitTime.page` budget (at least 10 s) instead of reading the page once.
 
 Full details, regex patterns, and Gherkin examples for every step are in
 the JSDoc block above each step in
@@ -120,6 +135,10 @@ content (CI builds one from scratch with DDEV — see
 npm install
 LAUNCH_URL=https://your-joomla-site.example npx cucumber-js
 ```
+
+`npm run test:examples` checks that every `Example #n:` line in the step
+JSDoc matches its own step (and no webship-js core step) and that every
+feature step is defined exactly once; CI runs it before the suite.
 
 ## License
 
