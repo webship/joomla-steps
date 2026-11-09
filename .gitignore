@@ -1,0 +1,11 @@
+node_modules/
+tests/reports/*.json
+tests/reports/*.html
+screenshots/
+videos/
+*.log
+.DS_Store
+.claude/
+
+# Local DDEV build of the Joomla site the suite runs against (CI builds the same in a temp dir).
+site/
