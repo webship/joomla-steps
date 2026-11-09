@@ -1,3 +1,5 @@
+# The titles, menu items and paths below are those of the Joomla "blog" sample
+# data; swap them for your own content when you copy this feature.
 Feature: Menu and category navigation
   As a visitor
   I want to move between the site's menu items and category pages

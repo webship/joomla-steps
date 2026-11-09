@@ -1,3 +1,5 @@
+# The titles, menu items and paths below are those of the Joomla "blog" sample
+# data; swap them for your own content when you copy this feature.
 Feature: Site search
   As a visitor
   I want to search the site with the Smart Search box

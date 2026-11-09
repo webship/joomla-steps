@@ -6,24 +6,51 @@
 // that are already covered by webship-js's generic click / fill / see
 // vocabulary are not duplicated here — see README.md "When to add a step".
 //
-// All locator interactions are wrapped in a friendly try/catch so a missing
-// selector reports a clear Joomla-flavoured hint instead of a raw
-// Playwright timeout stack.
+// Every assertion waits on its locator (the assertion is the wait), and
+// every failure is a friendly error with a hint instead of a raw Playwright
+// timeout stack.
 
 const { When, Then } = require('@cucumber/cucumber');
-const assert = require('assert');
-const { smartSettle } = require('webship-js/tests/step-definitions/webship');
+const { smartSettle, friendly } = require('webship-js/tests/step-definitions/webship');
+
+const MENU_HINT = 'The menu or template may have changed; check the visible text of the main menu (`.mod-menu`).';
+
+/** The per-assertion wait budget: `minWaitTime.page` from cucumber.js, else 10 s. */
+function budget(world) {
+  return Math.max((world.minWaitTime && world.minWaitTime.page) || 0, 10000);
+}
+
+/** Escape a literal string for use inside a RegExp (case-sensitive text match). */
+function literal(text) {
+  return new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+}
 
 /**
- * Run a locator action and rethrow with a short, friendly explanation on
- * failure instead of Playwright's raw timeout stack — keeps failures
- * readable when a Joomla template/menu changes.
+ * Run a locator action and rethrow as a friendly error (action, target,
+ * cause and a hint) instead of Playwright's raw timeout stack — keeps
+ * failures readable when a Joomla template or menu changes.
  */
-async function actOrExplain(label, target, fn) {
+async function actOrExplain(label, target, fn, hint = MENU_HINT) {
   try {
     return await fn();
   } catch (err) {
-    throw new Error(`Could not ${label} "${target}": ${err.message.split('\n')[0]}`);
+    throw friendly({ action: label, target, cause: err, hint });
+  }
+}
+
+/**
+ * Wait until `locator` has (or, with `notCase`, has no) visible match, then
+ * throw a friendly error otherwise. This is the web-first form of
+ * `assert(count > 0)`: the wait and the assertion are the same call.
+ */
+async function assertPresence(locator, notCase, { label, hint, timeout, state = 'visible' }) {
+  try {
+    await locator.first().waitFor({ state: notCase ? 'hidden' : state, timeout });
+  } catch {
+    throw friendly({
+      message: notCase ? `Expected no ${label}, but one is still on the page.` : `Expected ${label}, but none appeared within ${timeout} ms.`,
+      hint,
+    });
   }
 }
 
@@ -39,14 +66,14 @@ async function actOrExplain(label, target, fn) {
  * Example #1: When I open the "Blog" menu item
  * Example #2: When I open the "Help" menu item
  * Example #3: When we open the "FAQ" menu item
- * Example #4: When I open the "Login" menu item
- * Example #5: When I open the "Typography" menu item
+ * Example #4: And I open the "Login" menu item
+ * Example #5: When open the "Typography" menu item
  *
  */
 When(/^(I |we )*open the "([^"]*)?" menu item$/, async function (pronounCase, name) {
   const link = this.page.locator('.mod-menu a', { hasText: name }).first();
   await actOrExplain('open menu item', name, async () => {
-    await link.waitFor({ state: 'visible', timeout: 10000 });
+    await link.waitFor({ state: 'visible', timeout: budget(this) });
     await link.click();
   });
   await smartSettle(this.page, 1500);
@@ -54,9 +81,9 @@ When(/^(I |we )*open the "([^"]*)?" menu item$/, async function (pronounCase, na
 
 /**
  * Expand the collapsed Joomla/Bootstrap main menu on narrow (mobile)
- * viewports by clicking the navbar toggler button. No-op-safe: fails with a
- * clear message if the toggler is not present (e.g. desktop viewport where
- * the menu is already expanded).
+ * viewports by clicking the navbar toggler button. Fails with a clear
+ * message if the toggler is not present (e.g. desktop viewport where the
+ * menu is already expanded).
  *
  * Example #1: When I open the mobile menu
  * Example #2: When I open the mobile navigation menu
@@ -68,9 +95,9 @@ When(/^(I |we )*open the "([^"]*)?" menu item$/, async function (pronounCase, na
 When(/^(I |we )*open the mobile (navigation menu|navigation|menu)$/, async function (pronounCase, navigationCase) {
   const toggler = this.page.locator('.navbar-toggler').first();
   await actOrExplain('open mobile menu', 'navbar toggler', async () => {
-    await toggler.waitFor({ state: 'visible', timeout: 10000 });
+    await toggler.waitFor({ state: 'visible', timeout: budget(this) });
     await toggler.click();
-  });
+  }, 'The toggler only shows on narrow viewports: set the viewport to the "xs" breakpoint first, or check the template still uses `.navbar-toggler`.');
   await smartSettle(this.page, 1000);
 });
 
@@ -86,12 +113,11 @@ When(/^(I |we )*open the mobile (navigation menu|navigation|menu)$/, async funct
  *
  */
 Then(/^(I |we )*should( not)* see the "([^"]*)?" menu item$/, async function (pronounCase, notCase, name) {
-  const count = await this.page.locator('.mod-menu a', { hasText: name }).count();
-  if (notCase) {
-    assert.ok(count === 0, `Expected no "${name}" menu item, but found ${count}.`);
-  } else {
-    assert.ok(count > 0, `Expected a "${name}" menu item, but found none.`);
-  }
+  await assertPresence(this.page.locator('.mod-menu a', { hasText: name }), notCase, {
+    label: `a "${name}" menu item`,
+    hint: MENU_HINT + ' On a narrow viewport, open the mobile menu first.',
+    timeout: budget(this),
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -108,41 +134,42 @@ Then(/^(I |we )*should( not)* see the "([^"]*)?" menu item$/, async function (pr
  * Example #1: When I read more of "Joomla"
  * Example #2: When I read more of "Welcome to your blog"
  * Example #3: When we read more of "Your Template"
- * Example #4: When I read more of "About your home page"
- * Example #5: And I read more of "Your Modules"
+ * Example #4: And I read more of "About your home page"
+ * Example #5: When read more of "Your Modules"
  *
  */
 When(/^(I |we )*read more of "([^"]*)?"$/, async function (pronounCase, title) {
-  const readMoreLink = this.page.getByRole('link', { name: `Read more: ${title}` });
+  const readMoreLink = this.page.getByRole('link', { name: `Read more: ${title}` }).first();
   const headingLink = this.page.locator('.page-header a', { hasText: title }).first();
+  const link = readMoreLink.or(headingLink).first();
   await actOrExplain('read more of', title, async () => {
-    if (await readMoreLink.count()) {
-      await readMoreLink.first().click();
-    } else {
-      await headingLink.click();
-    }
-  });
+    await link.waitFor({ state: 'visible', timeout: budget(this) });
+    await link.click();
+  }, 'The article must be listed on the current page with a "Read more" link or a linked heading; check the title text.');
   await smartSettle(this.page, 1500);
 });
 
 /**
- * Assert the article currently open has the given title. Joomla renders
- * the title as the page's `h1` for a standalone article view, but as the
- * second `.page-header h2` for a blog/category item view (where `h1` is
- * the category name instead) — so both headings are checked.
+ * Assert the article currently open has (or does not have) the given
+ * title. Joomla renders the title as the page's `h1` for a standalone
+ * article view, but as the second `.page-header h2` for a blog/category
+ * item view (where `h1` is the category name instead) — so both headings
+ * are checked.
  *
  * Example #1: Then I should be viewing the "Joomla" article
  * Example #2: Then I should be viewing the "Love" article
- * Example #3: And I should be viewing the "Millions" article
+ * Example #3: And I should not be viewing the "Millions" article
  * Example #4: Then we should be viewing the "Welcome to your blog" article
  * Example #5: And should be viewing the "Your Template" article
  *
  */
-Then(/^(I |we )*should be viewing the "([^"]*)?" article$/, async function (pronounCase, title) {
-  const h1 = (await this.page.locator('h1').first().innerText()).trim();
-  if (h1.includes(title)) return;
-  const h2 = (await this.page.locator('.page-header h2').first().innerText()).trim();
-  assert.ok(h2.includes(title), `Expected the article heading to include "${title}", but the h1 was "${h1}" and the h2 was "${h2}".`);
+Then(/^(I |we )*should( not)* be viewing the "([^"]*)?" article$/, async function (pronounCase, notCase, title) {
+  const heading = this.page.locator('h1, .page-header h2').filter({ hasText: literal(title) });
+  await assertPresence(heading, notCase, {
+    label: `an article heading containing "${title}"`,
+    hint: 'The article heading is the page `h1`, or `.page-header h2` in a blog/category view; check the title text and that the "read more" step reached the article.',
+    timeout: budget(this),
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -156,20 +183,53 @@ Then(/^(I |we )*should be viewing the "([^"]*)?" article$/, async function (pron
  * Example #1: Then the breadcrumb should show "Home > Blog"
  * Example #2: And the breadcrumb should show "Home > Sample Layouts > Articles > Joomla"
  * Example #3: Then the breadcrumb should show "Home"
- * Example #4: And the breadcrumb should show "Home > FAQ"
+ * Example #4: And breadcrumb should show "Home > FAQ"
  * Example #5: Then the breadcrumb should show "Home > Sample Layouts > Articles > Love"
  *
  */
 Then(/^(the )*breadcrumb should show "([^"]*)?"$/, async function (theCase, expectedPath) {
-  const items = this.page.locator('.mod-breadcrumbs .breadcrumb-item');
-  const texts = (await items.allInnerTexts()).map((text) => text.trim()).filter(Boolean);
   const expected = expectedPath.split('>').map((part) => part.trim());
-  assert.deepStrictEqual(texts, expected, `Expected breadcrumb "${expected.join(' > ')}" but got "${texts.join(' > ')}".`);
+  const items = this.page.locator('.mod-breadcrumbs .breadcrumb-item');
+  const timeout = budget(this);
+  let texts = [];
+  try {
+    await items.first().waitFor({ state: 'visible', timeout });
+    // Poll until the trail matches or the budget runs out, so a breadcrumb
+    // that is still rendering does not fail the step.
+    await this.page.waitForFunction(
+      (want) => {
+        const got = Array.from(document.querySelectorAll('.mod-breadcrumbs .breadcrumb-item'))
+          .map((el) => (el.innerText || '').trim()).filter(Boolean);
+        return JSON.stringify(got) === JSON.stringify(want);
+      },
+      expected,
+      { timeout }
+    );
+  } catch (err) {
+    texts = (await items.allInnerTexts().catch(() => [])).map((text) => text.trim()).filter(Boolean);
+    throw friendly({
+      message: `Expected the breadcrumb "${expected.join(' > ')}" but the page shows "${texts.join(' > ') || '(no breadcrumb)'}".`,
+      cause: err,
+      hint: 'Breadcrumbs come from the Breadcrumbs module (`.mod-breadcrumbs`); check the menu item titles and that the module is published on this page.',
+    });
+  }
 });
 
 // ---------------------------------------------------------------------------
 // Site search (com_finder)
 // ---------------------------------------------------------------------------
+
+const SEARCH_HINT = 'The Smart Search module (`.js-finder-search-query`) must be published on this page; on a narrow viewport the search box may be inside the mobile menu.';
+
+async function submitSearch(world, term) {
+  const input = world.page.locator('.js-finder-search-query').first();
+  await actOrExplain('search the site for', term, async () => {
+    await input.waitFor({ state: 'visible', timeout: budget(world) });
+    await input.fill(term);
+    await input.press('Enter');
+  }, SEARCH_HINT);
+  await smartSettle(world.page, 1500);
+}
 
 /**
  * Submit the Joomla Smart Search form (`com_finder`) with the given search
@@ -180,17 +240,11 @@ Then(/^(the )*breadcrumb should show "([^"]*)?"$/, async function (theCase, expe
  * Example #2: When I search the site for "template"
  * Example #3: When we search the site for "articles"
  * Example #4: And I search the site for "blog"
- * Example #5: When I search the site for "modules"
+ * Example #5: When search the site for "modules"
  *
  */
 When(/^(I |we )*search the site for "([^"]*)?"$/, async function (pronounCase, term) {
-  const input = this.page.locator('.js-finder-search-query').first();
-  await actOrExplain('search the site for', term, async () => {
-    await input.waitFor({ state: 'visible', timeout: 10000 });
-    await input.fill(term);
-    await input.press('Enter');
-  });
-  await smartSettle(this.page, 1500);
+  await submitSearch(this, term);
 });
 
 /**
@@ -202,36 +256,57 @@ When(/^(I |we )*search the site for "([^"]*)?"$/, async function (pronounCase, t
  * Example #1: When I search the site for a word from the first article
  * Example #2: When we search the site for a word from the first article
  * Example #3: And I search the site for a word from the first article
+ * Example #4: When search the site for a word from the first article
+ * Example #5: And we search the site for a word from the first article
  *
  */
 When(/^(I |we )*search the site for a word from the first article$/, async function (pronounCase) {
-  const title = (await this.page.locator('.item-title, .page-header h1, .page-header h2').first().innerText()).trim();
-  const word = title.split(/[^\p{L}\p{N}]+/u).filter((w) => w.length >= 4)[0] || title.split(/\s+/)[0];
-  if (!word) throw new Error('No article title on this page to take a search word from. Open a page that lists articles first.');
-  this.joomlaSearchWord = word;
-  const input = this.page.locator('.js-finder-search-query').first();
-  await actOrExplain('search the site for', word, async () => {
-    await input.waitFor({ state: 'visible', timeout: 10000 });
-    await input.fill(word);
-    await input.press('Enter');
+  const heading = this.page.locator('.item-title, .page-header h1, .page-header h2').first();
+  await heading.waitFor({ state: 'visible', timeout: budget(this) }).catch((err) => {
+    throw friendly({
+      message: 'No article title on this page to take a search word from.',
+      cause: err,
+      hint: 'Open a page that lists articles first (the home page or the blog listing).',
+    });
   });
-  await smartSettle(this.page, 1500);
+  const title = (await heading.innerText()).trim();
+  const word = title.split(/[^\p{L}\p{N}]+/u).filter((w) => w.length >= 4)[0] || title.split(/\s+/)[0];
+  if (!word) {
+    throw friendly({
+      message: `The first article title on this page ("${title}") has no word to search for.`,
+      hint: 'Open a page whose first article has a title of at least one word.',
+    });
+  }
+  this.joomlaSearchWord = word;
+  await submitSearch(this, word);
 });
 
 /**
- * Assert the Smart Search results list contains the word the previous
- * `search the site for a word from the first article` step searched for.
+ * Assert the Smart Search results list contains (or does not contain) the
+ * word the previous `search the site for a word from the first article`
+ * step searched for.
  *
  * Example #1: Then I should see that word in the search results
  * Example #2: And we should see that word in the search results
  * Example #3: Then should see that word in the search results
+ * Example #4: Then I should not see that word in the search results
+ * Example #5: And we should not see that word in the search results
  *
  */
-Then(/^(I |we )*should see that word in the search results$/, async function (pronounCase) {
+Then(/^(I |we )*should( not)* see that word in the search results$/, async function (pronounCase, notCase) {
   const word = this.joomlaSearchWord;
-  if (!word) throw new Error('No search word is remembered: search the site for a word from the first article first.');
-  const text = await this.page.locator('#search-results').innerText();
-  assert.ok(text.toLowerCase().includes(word.toLowerCase()), `Search results should contain "${word}" but they contain: ${text}`);
+  if (!word) {
+    throw friendly({
+      message: 'No search word is remembered for this scenario.',
+      hint: 'Add "When I search the site for a word from the first article" before this step.',
+    });
+  }
+  // A string `hasText` is a case-insensitive, whitespace-normalised match.
+  await assertPresence(this.page.locator('#search-results').filter({ hasText: word }), notCase, {
+    label: `"${word}" in the search results`,
+    hint: 'Smart Search only finds indexed content: run the Smart Search indexer (System > Smart Search > Index) and check the word is in a published article.',
+    timeout: budget(this),
+  });
 });
 
 /**
@@ -242,14 +317,28 @@ Then(/^(I |we )*should see that word in the search results$/, async function (pr
  * Example #1: Then I should see no search results
  * Example #2: And we should see no search results
  * Example #3: Then should see no search results
+ * Example #4: And I should see no search results
+ * Example #5: Then we should see no search results
  *
  */
 Then(/^(I |we )*should see no search results$/, async function (pronounCase) {
   const results = this.page.locator('#search-results');
-  await results.waitFor({ state: 'attached', timeout: 10000 });
-  const text = (await results.innerText()).trim();
-  assert.ok(/no results/i.test(text) || (await results.locator('.result-item, .search-result, li').count()) === 0,
-    `Expected no search results but got: ${text.slice(0, 200)}`);
+  const timeout = budget(this);
+  try {
+    await results.waitFor({ state: 'attached', timeout });
+    await this.page.waitForFunction(() => {
+      const el = document.querySelector('#search-results');
+      if (!el) return false;
+      return /no results/i.test(el.innerText || '') || el.querySelectorAll('.result-item, .search-result, li').length === 0;
+    }, null, { timeout });
+  } catch (err) {
+    const text = (await results.innerText().catch(() => '')).trim();
+    throw friendly({
+      message: `Expected no search results, but the results list shows: "${text.slice(0, 200)}"`,
+      cause: err,
+      hint: 'Use a term no article contains, and check the page reached the Smart Search results (`#search-results`).',
+    });
+  }
 });
 
 /**
@@ -264,11 +353,9 @@ Then(/^(I |we )*should see no search results$/, async function (pronounCase) {
  *
  */
 Then(/^(I |we )*should( not)* see "([^"]*)?" in the search results$/, async function (pronounCase, notCase, expectedText) {
-  const results = this.page.locator('#search-results');
-  const text = await results.innerText();
-  if (notCase) {
-    assert.ok(!text.includes(expectedText), `Search results should NOT contain "${expectedText}" but they do.`);
-  } else {
-    assert.ok(text.includes(expectedText), `Search results should contain "${expectedText}" but they contain: ${text}`);
-  }
+  await assertPresence(this.page.locator('#search-results').filter({ hasText: literal(expectedText) }), notCase, {
+    label: `"${expectedText}" in the search results`,
+    hint: 'Smart Search only finds indexed content: run the Smart Search indexer (System > Smart Search > Index) and check the text is in a published article. The match is case-sensitive.',
+    timeout: budget(this),
+  });
 });

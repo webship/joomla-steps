@@ -1,3 +1,5 @@
+# The titles, menu items and paths below are those of the Joomla "blog" sample
+# data; swap them for your own content when you copy this feature.
 Feature: Home page
   As a visitor
   I want the Joomla home page to load with its key content and navigation
