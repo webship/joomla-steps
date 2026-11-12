@@ -4,8 +4,7 @@
   "description": "Cucumber step definitions for testing Joomla sites with webship-js.",
   "main": "tests/step-definitions/joomla.steps.js",
   "files": [
-    "tests/step-definitions/joomla.steps.js",
-    "tests/step-definitions/joomla-admin.steps.js",
+    "tests/step-definitions/*.js",
     "tests/features",
     "README.md",
     "LICENSE"
