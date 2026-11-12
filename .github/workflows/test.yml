@@ -38,6 +38,8 @@ jobs:
 
       - name: Build a default Joomla site with DDEV
         run: .github/scripts/build-ddev-joomla.sh
+        env:
+          JOOMLA_LANGUAGES: fr-FR
 
       - name: Check the JSDoc examples and feature steps against the step regexes
         run: npm run test:examples
@@ -47,6 +49,9 @@ jobs:
 
       - name: Run joomla-steps test suite
         run: npx cucumber-js
+
+      - name: Run the multilingual lane
+        run: CUCUMBER_TAGS=@multilingual npx cucumber-js
 
       - name: Upload test report
         if: always()

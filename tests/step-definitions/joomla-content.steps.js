@@ -62,6 +62,7 @@ const KINDS = {
   'user': { page: 'Users', stateFilter: null },
   'group': { page: 'Groups', stateFilter: null },
   'access level': { page: 'Access Levels', stateFilter: null },
+  'content language': { page: 'Content Languages', stateFilter: 'filter[published]', all: '*', trashed: '-2' },
 };
 
 /**
@@ -422,7 +423,7 @@ When(/^(I |we )*open the (article|category|menu item|module|plugin|extension|use
  * Example #8: And the access level "Registered" should exist
  *
  */
-Then(/^the (article|category|menu item|module|plugin|extension|user|menu|group|access level) "([^"]*)?" should( not)* exist$/, async function (kind, name, notCase) {
+Then(/^the (article|category|menu item|module|plugin|extension|user|menu|group|access level|content language) "([^"]*)?" should( not)* exist$/, async function (kind, name, notCase) {
   const { row, rows } = await findItem(this, kind, name);
   if (!!row === !!notCase) {
     throw friendly({
@@ -445,7 +446,7 @@ Then(/^the (article|category|menu item|module|plugin|extension|user|menu|group|a
  * Example #5: Given the menu "Review menu" is removed
  *
  */
-Given(/^(?:the |we have the )(article|category|menu item|module|menu) "([^"]*)?"(?: is removed| removed)$/, async function (kind, name) {
+Given(/^(?:the |we have the )(article|category|menu item|module|menu|content language) "([^"]*)?"(?: is removed| removed)$/, async function (kind, name) {
   for (let attempt = 0; attempt < 10; attempt++) {
     const { rows } = await findItem(this, kind, name);
     const exact = rows.find((row) => row.names.includes(name.trim()));

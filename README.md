@@ -136,6 +136,7 @@ SITE_DIR=$HOME/joomla-test PROJECT_NAME=joomla-test .github/scripts/build-ddev-j
 | `PHP_VERSION` | `8.3` | The PHP version of the container. |
 | `PROJECT_NAME` | `joomla-ci` | The DDEV project name. |
 | `SITE_DIR` | a temporary folder | The project folder. |
+| `JOOMLA_LANGUAGES` | none | Language packs to install, separated by spaces (`fr-FR` for the multilingual lane). |
 | `ADMIN_USER`, `ADMIN_PASSWORD`, and the same for `EDITOR_`, `MANAGER_` and `MEMBER_` | see the script | The accounts. |
 
 ## Steps
@@ -179,6 +180,7 @@ expression and at least five Gherkin examples. This is the summary.
 | `the site should( not) be running Joomla` | Then |
 | `I should( not) see the "<title>" module` | Then |
 | `I should( not) see the language switcher` | Then |
+| `I switch the site language to "<language>"` | When |
 
 Joomla answers a refused page (403) in three ways, and the 403 step reads all of
 them with the response status: the error template of the site, the error
@@ -230,7 +232,7 @@ log and messages. A query string such as `option=com_tags&view=tags` works too.
 | `I open the (article\|category\|menu item\|module\|plugin\|extension\|user) "<title>" for editing` | When |
 | `the (article\|category\|...) "<title>" should( not) exist` | Then |
 | `the (article\|category\|...) "<title>" should( not) be (published\|unpublished\|archived\|trashed\|featured\|unfeatured\|enabled\|disabled\|blocked\|checked out)` | Then |
-| `the (article\|category\|menu item\|module\|menu) "<title>" is removed` | Given |
+| `the (article\|category\|menu item\|module\|menu\|content language) "<title>" is removed` | Given |
 | `I create (an\|a featured\|an unpublished) article titled "<title>"( in the "<category>" category)( with the text "<text>")` | When |
 | `I create a category titled "<title>"` | When |
 | `I create a menu titled "<title>"` and `I delete the menu "<title>"` | When |
@@ -270,6 +272,23 @@ Joomla's Global Configuration is a form: read it with `the field labelled "Site
 Name" should have the value "..."` and change it with `I set the field labelled
 "Site Name" to "..."`, then save with `I click the "Save" toolbar button`.
 
+## Multilingual sites
+
+`I should( not) see the language switcher` and `I switch the site language to
+"<language>"` work on the Language Switcher module, whether it shows names, flags
+or a dropdown. [`tests/features/multilingual.feature`](tests/features/multilingual.feature)
+turns a default site into a multilingual one (the Language Filter plugin, a second
+content language, a home page for each language, the switcher module), switches
+between English and French, and puts the site back. A multilingual site changes
+every address of the front end, so the feature is a lane of its own:
+
+```bash
+CUCUMBER_TAGS=@multilingual npx cucumber-js
+```
+
+It needs the French language pack: `JOOMLA_LANGUAGES=fr-FR` when the build script
+makes the site, or Administrator, System, Install, Languages.
+
 ## Accessibility
 
 webship-js ships the axe-core steps (`the page should have no critical
@@ -299,7 +318,7 @@ defined exactly once. CI runs it before the suite.
 
 - `FEATURES=tests/features/a.feature,tests/features/b.feature npm test` runs a
   subset of the feature files; `CUCUMBER_TAGS=@critical npm test` runs a tag lane
-  (the default run leaves `@wip` out).
+  (the default run leaves `@wip` and `@multilingual` out).
 - `cucumber.js` carries the `video` block (`WEBSHIP_VIDEO=on-failure` records the
   browser) and the `javascript` block (`WEBSHIP_JS_ERROR_MODE=fail` fails a
   scenario on a JavaScript error; `@js-off` silences one scenario) that webship-js

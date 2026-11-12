@@ -11,7 +11,8 @@
 // levels, configuration, extensions, cache, check-in).
 //
 // Steps that webship-js already covers with its generic click, fill and see
-// vocabulary are not duplicated here; see README.md "When to add a step".
+// vocabulary are not duplicated here; see "Rules for a new step" in README.md of
+// this folder.
 //
 // Every assertion waits on its locator (the assertion is the wait), and every
 // failure is a friendly error with a hint instead of a raw Playwright timeout
@@ -833,4 +834,36 @@ Then(/^(I |we )*should( not)* see the language switcher$/, async function (prono
     hint: 'A multilingual site needs the "System - Language Filter" plugin, two content languages and a published "Language Switcher" module.',
     timeout: budget(this),
   });
+});
+
+/**
+ * Switch the site language with the language switcher, by the name the
+ * switcher shows (a link, the label or the title of its flag, or an option of the
+ * dropdown variant).
+ *
+ * Example #1: When I switch the site language to "Français"
+ * Example #2: When I switch the site language to "English (United Kingdom)"
+ * Example #3: When we switch the site language to "Deutsch"
+ * Example #4: And I switch the site language to "Español"
+ * Example #5: When switch the site language to "Français (France)"
+ *
+ */
+When(/^(I |we )*switch the site language to "([^"]*)?"$/, async function (pronounCase, language) {
+  const switcher = this.page.locator('.mod-languages');
+  await actOrExplain('switch the site language to', language, async () => {
+    await switcher.first().waitFor({ state: 'visible', timeout: budget(this) });
+    const select = switcher.locator('select').first();
+    if (await select.count()) {
+      await select.selectOption({ label: language });
+    } else {
+      // The switcher shows the language as text, as a flag (an image with the
+      // name as its title) or as a code with the name as its title; the link
+      // carries the name as its label in the last two cases.
+      const byText = switcher.locator('a').filter({ hasText: exactly(language) });
+      const byName = switcher.locator(`a[aria-label="${language}"], a:has(img[title="${language}"]), a:has(img[alt="${language}"]), a:has([title="${language}"])`);
+      const link = (await byText.count()) ? byText.first() : byName.first();
+      await link.click();
+    }
+  }, 'The language must be one the switcher offers: check the name it shows (the native title of the content language, or the title of its flag).');
+  await smartSettle(this.page, 2000);
 });
