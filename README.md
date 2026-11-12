@@ -127,8 +127,12 @@ builds a default Joomla site in a DDEV project, applies the "blog" sample data,
 builds the Smart Search index and creates the four accounts. It is what CI runs.
 
 ```bash
-SITE_DIR=$HOME/joomla-test PROJECT_NAME=joomla-test .github/scripts/build-ddev-joomla.sh
+SITE_DIR=$HOME/joomla-ci .github/scripts/build-ddev-joomla.sh
 ```
+
+The site answers at `https://joomla-ci.ddev.site`, the address `cucumber.js` uses
+when `LAUNCH_URL` is not set. With another `PROJECT_NAME`, set
+`LAUNCH_URL=https://<project name>.ddev.site`.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
@@ -303,14 +307,21 @@ the front page and none on the login page) instead of hiding them.
 
 ## Running the tests in this repository
 
-Point `LAUNCH_URL` at a Joomla site with the "blog" sample content and the four
-accounts (CI builds one from scratch with DDEV; see
-[`.github/workflows/test.yml`](.github/workflows/test.yml)):
+Build the test site (see [A test site](#a-test-site)) and run the suite. Without
+`LAUNCH_URL` the suite runs against that local site, `https://joomla-ci.ddev.site`;
+CI builds the same site and runs the same commands (see
+[`.github/workflows/test.yml`](.github/workflows/test.yml)).
 
 ```bash
 npm install
-LAUNCH_URL=https://your-joomla-site.example npx cucumber-js
+SITE_DIR=$HOME/joomla-ci .github/scripts/build-ddev-joomla.sh
+npx cucumber-js
 ```
+
+To run against another Joomla site with the "blog" sample content and the four
+accounts, set `LAUNCH_URL=https://your-joomla-site.example`. The suite logs in
+with the accounts of the registry and changes content: point it only at a site
+that is yours to test.
 
 `npm run test:examples` checks that every `Example #n:` line in the step JSDoc
 matches its own step (and no webship-js core step) and that every feature step is

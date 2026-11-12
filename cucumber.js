@@ -29,7 +29,9 @@ module.exports = {
       },
     },
     worldParameters: {
-      launchUrl: process.env.LAUNCH_URL || 'https://cassiopeia.joomla.com',
+      // The default is the local DDEV site that .github/scripts/build-ddev-joomla.sh builds (project "joomla-ci"),
+      // never a site of somebody else: the suite logs in with the accounts below. LAUNCH_URL points it at another site.
+      launchUrl: process.env.LAUNCH_URL || 'https://joomla-ci.ddev.site',
       // Video of the browser: 'off', 'on', 'on-failure' or 'tag' (scenarios tagged @video; @no-video opts out).
       video: { mode: process.env.WEBSHIP_VIDEO || 'off', dir: './videos', size: { width: 1280, height: 720 }, filenamePattern: '{datetime}.{feature_file}.{scenario}.{status}.{ext}' },
       // JavaScript errors the page raises: 'warn' reports them, 'fail' fails the scenario, 'off' ignores them; @js-fail, @js-warn and @js-off per scenario.

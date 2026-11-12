@@ -41,6 +41,12 @@ jobs:
         env:
           JOOMLA_LANGUAGES: fr-FR
 
+      - name: Check the site is the one cucumber.js runs against by default
+        run: |
+          DEFAULT_URL="$(LAUNCH_URL= node -e "console.log(require('./cucumber.js').default.worldParameters.launchUrl)")"
+          echo "Built: $LAUNCH_URL, default: $DEFAULT_URL"
+          test "${LAUNCH_URL%/}" = "$DEFAULT_URL"
+
       - name: Check the JSDoc examples and feature steps against the step regexes
         run: npm run test:examples
 
