@@ -1,16 +1,31 @@
+# The accounts "admin" (Super Users) and "manager" (Manager) are in the users registry of
+# cucumber.js; the Joomla CLI created them when the site was built.
 Feature: Administrator login
-  As the site's Super User
+  As a site administrator
   I want to log in to and out of the /administrator control panel
-  So that I can manage the site and be sure unauthorized logins are rejected
+  So that I can manage the site and be sure unauthorised logins are rejected
 
   Scenario: Log in with valid credentials
     Given I am a logged in user with the "admin" user
     Then I should see the administrator dashboard
+    And I should be logged in to the administrator panel as "Super User"
+
+  Scenario: A Manager logs in to the administrator
+    Given I am a logged in user with the "manager" user
+    Then I should see the administrator dashboard
+    And I should be logged in to the administrator panel as "Test Manager"
 
   Scenario: Log in with an invalid password is rejected
     Given I am on the administrator login page
     When I log in to the administrator panel as "admin" with password "not-the-right-password"
     Then I should see an invalid login error in the administrator panel
+    And I should be on the administrator login page
+
+  Scenario: A registered user cannot log in to the administrator
+    Given I am on the administrator login page
+    When I log in to the administrator panel as "member" with password "Member123456789!"
+    Then I should not see the administrator dashboard
+    And I should be on the administrator login page
 
   Scenario: Log out returns to the login page
     Given I am a logged in user with the "admin" user
@@ -23,3 +38,4 @@ Feature: Administrator login
     Then I should see the administrator dashboard
     Given I am not logged in
     Then I should be on the administrator login page
+    And I should not be logged in to the administrator panel
