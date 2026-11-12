@@ -252,6 +252,8 @@ log and messages. A query string such as `option=com_tags&view=tags` works too.
 The steps that name an item ("the article "Welcome"") open the list of that kind,
 filtered by the title and showing every state, so they do not depend on the page
 the scenario was on or on the filters a previous session left in the list state.
+A state action on an item that is already in that state (enable a plugin that is
+enabled, publish an article that is published) does nothing.
 "Is removed" trashes and deletes the item when it exists and does nothing when it
 does not: put it at the top of a scenario that creates the item, so the scenario
 runs again after a failed run.
@@ -276,7 +278,7 @@ Name" should have the value "..."` and change it with `I set the field labelled
 
 `I should( not) see the language switcher` and `I switch the site language to
 "<language>"` work on the Language Switcher module, whether it shows names, flags
-or a dropdown. [`tests/features/multilingual.feature`](tests/features/multilingual.feature)
+or a dropdown (the step opens the dropdown first). [`tests/features/multilingual.feature`](tests/features/multilingual.feature)
 turns a default site into a multilingual one (the Language Filter plugin, a second
 content language, a home page for each language, the switcher module), switches
 between English and French, and puts the site back. A multilingual site changes

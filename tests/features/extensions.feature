@@ -11,8 +11,11 @@ Feature: Extensions and plugins
     And the extension "Cassiopeia" should be enabled
     And the plugin "Content - Smart Search" should be enabled
 
+  # The first step finds the plugin already disabled and does nothing: an action that
+  # leads to the state the item is in is not an error.
   Scenario: Enable and disable a plugin
     Given I am on the administrator "Plugins" page
+    When I disable the plugin "System - Page Cache"
     Then the plugin "System - Page Cache" should be disabled
     When I enable the plugin "System - Page Cache"
     Then the plugin "System - Page Cache" should be enabled

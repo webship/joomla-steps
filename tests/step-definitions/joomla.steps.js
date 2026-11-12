@@ -838,8 +838,8 @@ Then(/^(I |we )*should( not)* see the language switcher$/, async function (prono
 
 /**
  * Switch the site language with the language switcher, by the name the
- * switcher shows (a link, the label or the title of its flag, or an option of the
- * dropdown variant).
+ * switcher shows: the text of a link, or the title of its flag. When the
+ * switcher is a dropdown, the step opens it first.
  *
  * Example #1: When I switch the site language to "Français"
  * Example #2: When I switch the site language to "English (United Kingdom)"
@@ -852,18 +852,16 @@ When(/^(I |we )*switch the site language to "([^"]*)?"$/, async function (pronou
   const switcher = this.page.locator('.mod-languages');
   await actOrExplain('switch the site language to', language, async () => {
     await switcher.first().waitFor({ state: 'visible', timeout: budget(this) });
-    const select = switcher.locator('select').first();
-    if (await select.count()) {
-      await select.selectOption({ label: language });
-    } else {
-      // The switcher shows the language as text, as a flag (an image with the
-      // name as its title) or as a code with the name as its title; the link
-      // carries the name as its label in the last two cases.
-      const byText = switcher.locator('a').filter({ hasText: exactly(language) });
-      const byName = switcher.locator(`a[aria-label="${language}"], a:has(img[title="${language}"]), a:has(img[alt="${language}"]), a:has([title="${language}"])`);
-      const link = (await byText.count()) ? byText.first() : byName.first();
-      await link.click();
-    }
-  }, 'The language must be one the switcher offers: check the name it shows (the native title of the content language, or the title of its flag).');
+    // The switcher shows a language as text, or as a flag: an image with the
+    // name as its title, inside a link that carries the name as its label.
+    const byText = switcher.locator('a').filter({ hasText: exactly(language) });
+    const byFlag = switcher.locator(`a[aria-label="${language}"], a:has(img[title="${language}"]), a:has(img[alt="${language}"])`);
+    const link = byText.or(byFlag).first();
+    await link.waitFor({ state: 'attached', timeout: budget(this) });
+    // The dropdown form keeps the links in a menu that its button opens.
+    const toggle = switcher.locator('.dropdown-toggle').first();
+    if (!(await link.isVisible()) && (await toggle.count())) await toggle.click();
+    await link.click();
+  }, 'The language must be one the switcher offers: use the name it shows (the native title of the content language, or the title of its flag).');
   await smartSettle(this.page, 2000);
 });
