@@ -13,6 +13,7 @@ your site.
 | `error-pages` | The 404 page, and the 403 answers of the administrator and of the site. |
 | `administrator`, `administrator-navigation` | Administrator login and logout, the dashboard, the sidebar menu, named pages. |
 | `articles`, `categories`, `menus`, `modules`, `media` | Content lifecycles in the administrator and their effect on the site. |
+| `lists` | The list on the page: filters, selected rows, toolbar actions. |
 | `users`, `configuration`, `extensions`, `maintenance` | Users, groups, access levels, Global Configuration, plugins, cache, check-in. |
 | `accessibility` | The axe audit of front end and administrator pages. |
 

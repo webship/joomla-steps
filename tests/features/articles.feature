@@ -72,3 +72,22 @@ Feature: Articles
     Then I should see the row "Typography" in the list
     When I search the list for "qzxjvwk no such article"
     Then I should see an empty list
+
+  Scenario: Edit an article with the editor, a select and a switcher, then check it in
+    Given the article "Review edited article" is removed
+    When I create an article titled "Review edited article" in the "Blog" category
+    And I open the article "Review edited article" for editing
+    And I fill in the rich text editor with "<p>The text the editor step wrote.</p>"
+    And I choose "Typography" in the "Category" field
+    And I switch "Featured" to "Yes"
+    And I click the "Save" toolbar button
+    Then I should see a success message "Article saved."
+    And the rich text editor should contain "The text the editor step wrote."
+    And the field labelled "Category" should have the value "Typography"
+    And the field labelled "Featured" should have the value "Yes"
+    When I am on the administrator "Articles" page
+    Then the article "Review edited article" should be featured
+    And the article "Review edited article" should be checked out
+    When I check in the article "Review edited article"
+    Then the article "Review edited article" should not be checked out
+    And the article "Review edited article" is removed
