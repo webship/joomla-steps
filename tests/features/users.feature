@@ -1,5 +1,6 @@
-# The accounts are the ones the build script creates with the Joomla CLI. The suite
-# only reads them: no feature creates, changes or deletes a user.
+# The accounts are the ones the build script creates with the Joomla CLI. No feature
+# creates or deletes a user; one scenario blocks the "editor" account and unblocks it
+# again (it starts with the unblock, so a failed run does not leave it blocked).
 Feature: Users, groups and access levels
   As an administrator
   I want to see who may do what on the site
@@ -39,3 +40,11 @@ Feature: Users, groups and access levels
     Given I am a logged in user with the "manager" user
     When I go to the administrator "Global Configuration" page
     Then I should not see the administrator page title "Global Configuration"
+
+  Scenario: Block an account and unblock it again
+    When I unblock the user "editor"
+    And I block the user "editor"
+    Then the user "editor" should be blocked
+    And the user "editor" should not be enabled
+    When I unblock the user "editor"
+    Then the user "editor" should be enabled

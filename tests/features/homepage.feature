@@ -12,6 +12,9 @@ Feature: Home page
     Then I should see "Welcome to Joomla on Cassiopeia!"
     And the breadcrumb should show "Home"
 
+  Scenario: The page names Joomla as its generator
+    Then the site should be running Joomla
+
   Scenario: Main menu is present
     Then I should see the "Blog" menu item
     And I should see the "Help" menu item
