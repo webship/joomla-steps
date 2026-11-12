@@ -481,9 +481,10 @@ Then(/^(I |we )*should( not)* see an invalid login error on the site$/, async fu
  */
 Then(/^(I |we )*should( not)* see (?:a|an|the) (?:(success|info|notice|warning|error) )?(?:system )?message(?: "([^"]*)")?$/, async function (pronounCase, notCase, type, text) {
   const wanted = [type ? `${type} ` : '', 'message', supplied(text) ? ` containing "${text}"` : ''].join('');
+  const article = /^[aeiou]/.test(wanted) ? 'an' : 'a';
   try {
     await assertPresence(alerts(this, type, text), notCase, {
-      label: `a ${wanted}`,
+      label: `${article} ${wanted}`,
       hint: 'System messages are `joomla-alert` elements in `#system-message-container`; a message can be dismissed or replaced by the next page, so assert it right after the action.',
       timeout: budget(this),
     });
@@ -721,9 +722,12 @@ When(/^(I |we )*open (?:the search result "([^"]*)"|the first search result)$/, 
 // ---------------------------------------------------------------------------
 
 /**
- * Assert the page is (or is not) Joomla's error page for a missing page (404)
- * or a refused one (403): the error template marks its body with `error_site`,
- * and the response status of the navigation must match.
+ * Assert the page is (or is not) Joomla's answer to a missing page (404) or a
+ * refused one (403). The response status of the navigation must match, and the
+ * page must say so in one of the ways Joomla does: the error template of the
+ * site (`body.error_site`), the error template of the administrator (the error
+ * code in a badge), or, for a 403 that a component answers inside the normal
+ * template, the error message "You don't have permission to access this".
  *
  * Example #1: Then I should be on the 404 page
  * Example #2: Then I should be on the page not found page
@@ -737,11 +741,17 @@ Then(/^(I |we )*should( not)* be on the (404|page not found|403|access denied) p
   const timeout = budget(this);
   const probe = async () => this.page.evaluate(() => {
     const nav = performance.getEntriesByType('navigation')[0];
-    return { error: /(^|\s)error_(site|administrator)(\s|$)/.test(document.body.className), status: nav && nav.responseStatus, title: document.title };
+    const badge = document.querySelector('blockquote .badge');
+    return {
+      template: /(^|\s)error_site(\s|$)/.test(document.body.className) || (!!badge && /^\d{3}$/.test((badge.textContent || '').trim())),
+      refused: !!document.querySelector('#system-message-container joomla-alert[type="danger"]'),
+      status: nav && nav.responseStatus,
+      title: document.title,
+    };
   });
   const deadline = Date.now() + timeout;
   let state = await probe();
-  const matches = (s) => s.error && s.status === status;
+  const matches = (s) => s.status === status && (s.template || (status === 403 && s.refused));
   while (matches(state) === !!notCase && Date.now() < deadline) {
     await this.page.waitForTimeout(300);
     state = await probe();
@@ -749,9 +759,9 @@ Then(/^(I |we )*should( not)* be on the (404|page not found|403|access denied) p
   if (matches(state) === !!notCase) {
     throw friendly({
       message: notCase
-        ? `Expected not to be on the ${status} page, but the page is Joomla's error page with status ${state.status}.`
-        : `Expected Joomla's ${status} error page, but the page "${state.title}" has status ${state.status}${state.error ? '' : ' and is not the error template'}.`,
-      hint: 'Open a path that does not exist (for a 404) or an item the user may not view (for a 403) before this step.',
+        ? `Expected not to be on the ${status} page, but the page "${state.title}" is Joomla's answer with status ${state.status}.`
+        : `Expected Joomla's ${status} page, but the page "${state.title}" has status ${state.status}${state.template || state.refused ? '' : ' and shows neither the error template nor a refusal message'}.`,
+      hint: 'Open a path that does not exist (for a 404) or a page the account may not open (for a 403) before this step.',
     });
   }
 });

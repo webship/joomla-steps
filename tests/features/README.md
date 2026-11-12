@@ -10,7 +10,7 @@ your site.
 | `homepage`, `navigation`, `blog` | Front page, menus, categories, articles, breadcrumbs, the mobile menu. |
 | `search` | Smart Search: results, no results, opening a result. |
 | `site-login` | Logging in to and out of the site with the users registry. |
-| `error-pages` | The 404 page. |
+| `error-pages` | The 404 page, and the 403 answers of the administrator and of the site. |
 | `administrator`, `administrator-navigation` | Administrator login and logout, the dashboard, the sidebar menu, named pages. |
 | `articles`, `categories`, `menus`, `modules`, `media` | Content lifecycles in the administrator and their effect on the site. |
 | `users`, `configuration`, `extensions`, `maintenance` | Users, groups, access levels, Global Configuration, plugins, cache, check-in. |

@@ -175,10 +175,15 @@ expression and at least five Gherkin examples. This is the summary.
 | `I should see no search results` | Then |
 | `I should see( at least) <n> search results` | Then |
 | `I open the search result "<title>"` and `I open the first search result` | When |
-| `I should( not) be on the (404\|403) page` | Then |
+| `I should( not) be on the (404\|page not found\|403\|access denied) page` | Then |
 | `the site should( not) be running Joomla` | Then |
 | `I should( not) see the "<title>" module` | Then |
 | `I should( not) see the language switcher` | Then |
+
+Joomla answers a refused page (403) in three ways, and the 403 step reads all of
+them with the response status: the error template of the site, the error
+template of the administrator, and an error message inside the normal template
+(the article form of the site, for an account that may not create articles).
 
 ### Administrator
 
