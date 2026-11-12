@@ -15,6 +15,7 @@ your site.
 | `articles`, `categories`, `menus`, `modules`, `media` | Content lifecycles in the administrator and their effect on the site. |
 | `lists` | The list on the page: filters, selected rows, toolbar actions. |
 | `users`, `configuration`, `extensions`, `maintenance` | Users, groups, access levels, Global Configuration, plugins, cache, check-in. |
+| `multilingual` | A second content language and the language switcher; a lane of its own (`CUCUMBER_TAGS=@multilingual`). |
 | `accessibility` | The axe audit of front end and administrator pages. |
 
 Scenarios that create content remove it at the end (trash, then delete

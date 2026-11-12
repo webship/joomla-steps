@@ -62,6 +62,7 @@ const KINDS = {
   'user': { page: 'Users', stateFilter: null },
   'group': { page: 'Groups', stateFilter: null },
   'access level': { page: 'Access Levels', stateFilter: null },
+  'content language': { page: 'Content Languages', stateFilter: 'filter[published]', all: '*', trashed: '-2' },
 };
 
 /**
@@ -162,8 +163,8 @@ function itemRow(world, row) {
  * Open the list, find the item, select its row and return the row locator.
  * Fails with the titles the list does show when the item is not there.
  */
-async function selectItem(world, kind, name, state = 'all') {
-  const { row, rows } = await findItem(world, kind, name, state);
+async function selectItem(world, kind, name, state = 'all', found = null) {
+  const { row, rows } = found || await findItem(world, kind, name, state);
   if (!row) {
     throw friendly({
       message: `The ${kind} list has no "${name}"${rows.length ? `; its rows are: ${rows.map((entry) => entry.names[0]).join(', ')}` : ' (the list is empty)'}.`,
@@ -329,15 +330,15 @@ Then(/^(I |we )*should( not)* see an empty list$/, async function (pronounCase, 
 
 // The toolbar button of each action, and the kinds it applies to.
 const ACTIONS = {
-  'publish': { button: 'Publish', kinds: ['article', 'category', 'menu item', 'module'] },
-  'unpublish': { button: 'Unpublish', kinds: ['article', 'category', 'menu item', 'module'] },
-  'archive': { button: 'Archive', kinds: ['article', 'category'] },
-  'trash': { button: 'Trash', kinds: ['article', 'category', 'menu item', 'module'] },
-  'feature': { button: 'Feature', kinds: ['article'] },
-  'unfeature': { button: 'Unfeature', kinds: ['article'] },
+  'publish': { button: 'Publish', kinds: ['article', 'category', 'menu item', 'module'], leadsTo: 'published' },
+  'unpublish': { button: 'Unpublish', kinds: ['article', 'category', 'menu item', 'module'], leadsTo: 'unpublished' },
+  'archive': { button: 'Archive', kinds: ['article', 'category'], leadsTo: 'archived' },
+  'trash': { button: 'Trash', kinds: ['article', 'category', 'menu item', 'module'], leadsTo: 'trashed' },
+  'feature': { button: 'Feature', kinds: ['article'], leadsTo: 'featured' },
+  'unfeature': { button: 'Unfeature', kinds: ['article'], leadsTo: 'unfeatured' },
   'check in': { button: 'Check-in', kinds: ['article', 'category', 'menu item', 'module', 'plugin'] },
-  'enable': { button: 'Enable', kinds: ['plugin', 'extension'] },
-  'disable': { button: 'Disable', kinds: ['plugin', 'extension'] },
+  'enable': { button: 'Enable', kinds: ['plugin', 'extension'], leadsTo: 'published' },
+  'disable': { button: 'Disable', kinds: ['plugin', 'extension'], leadsTo: 'unpublished' },
   'activate': { button: 'Activate', kinds: ['user'] },
   'block': { button: 'Block', kinds: ['user'] },
   'unblock': { button: 'Unblock', kinds: ['user'] },
@@ -346,7 +347,10 @@ const ACTIONS = {
 /**
  * Apply a state action to an item: open the list of its kind filtered by its
  * title, select its row and press the toolbar button. Fails with the message
- * Joomla answers when the action is refused.
+ * Joomla answers when the action is refused. When the list shows the item
+ * already in the state the action leads to (a plugin that is enabled, an
+ * article that is published), the step does nothing, so a scenario can start
+ * from either state.
  *
  * Example #1: When I publish the article "Review article"
  * Example #2: When I unpublish the module "Review module"
@@ -360,7 +364,12 @@ When(/^(I |we )*(publish|unpublish|archive|trash|feature|unfeature|check in|enab
   if (!definition.kinds.includes(kind)) {
     throw friendly({ message: `A ${kind} cannot be ${action}ed.`, hint: `"${action}" applies to: ${definition.kinds.join(', ')}.` });
   }
-  await selectItem(this, kind, name);
+  const found = await findItem(this, kind, name);
+  if (found.row && definition.leadsTo && kind !== 'user') {
+    const current = ['featured', 'unfeatured'].includes(definition.leadsTo) ? found.row.featured : found.row.states[0];
+    if (current === definition.leadsTo) return;
+  }
+  await selectItem(this, kind, name, 'all', found);
   await clickToolbarButton(this, definition.button);
   await awaitOutcome(this, `${action} the ${kind} "${name}"`);
 });
@@ -422,7 +431,7 @@ When(/^(I |we )*open the (article|category|menu item|module|plugin|extension|use
  * Example #8: And the access level "Registered" should exist
  *
  */
-Then(/^the (article|category|menu item|module|plugin|extension|user|menu|group|access level) "([^"]*)?" should( not)* exist$/, async function (kind, name, notCase) {
+Then(/^the (article|category|menu item|module|plugin|extension|user|menu|group|access level|content language) "([^"]*)?" should( not)* exist$/, async function (kind, name, notCase) {
   const { row, rows } = await findItem(this, kind, name);
   if (!!row === !!notCase) {
     throw friendly({
@@ -445,7 +454,7 @@ Then(/^the (article|category|menu item|module|plugin|extension|user|menu|group|a
  * Example #5: Given the menu "Review menu" is removed
  *
  */
-Given(/^(?:the |we have the )(article|category|menu item|module|menu) "([^"]*)?"(?: is removed| removed)$/, async function (kind, name) {
+Given(/^(?:the |we have the )(article|category|menu item|module|menu|content language) "([^"]*)?"(?: is removed| removed)$/, async function (kind, name) {
   for (let attempt = 0; attempt < 10; attempt++) {
     const { rows } = await findItem(this, kind, name);
     const exact = rows.find((row) => row.names.includes(name.trim()));

@@ -9,8 +9,9 @@ module.exports = {
     ],
     // FEATURES=tests/features/a.feature,tests/features/b.feature runs a subset.
     paths: process.env.FEATURES ? process.env.FEATURES.split(',') : ['tests/features/**/*.feature'],
-    // CUCUMBER_TAGS=@critical runs a lane; the default keeps work-in-progress and auth-state setup out.
-    tags: process.env.CUCUMBER_TAGS || 'not @wip and not @auth-setup',
+    // CUCUMBER_TAGS=@critical runs a lane; the default keeps work-in-progress, auth-state setup and the multilingual lane out.
+    // @multilingual changes every address of the site (the language code comes first): it runs as a lane of its own, CUCUMBER_TAGS=@multilingual.
+    tags: process.env.CUCUMBER_TAGS || 'not @wip and not @auth-setup and not @multilingual',
     format: [
       '@cucumber/pretty-formatter',
       'json:tests/reports/cucumber_report.json',

@@ -12,6 +12,7 @@
 #   EDITOR_USER, EDITOR_PASSWORD     an Editor account (default editor / Editor123456789!)
 #   MANAGER_USER, MANAGER_PASSWORD   a Manager account (default manager / Manager123456789!)
 #   MEMBER_USER, MEMBER_PASSWORD     a Registered account (default member / Member123456789!)
+#   JOOMLA_LANGUAGES  language packs to install, separated by spaces (default none; "fr-FR" for the multilingual lane)
 # The accounts are configuration: they are created once here and named in
 # cucumber.js; the features never create or delete users.
 set -euo pipefail
@@ -81,6 +82,14 @@ ddev mysql -e "UPDATE jos_extensions SET params='{\"mode\":3}' WHERE element='st
 # Sample data seeds the articles but leaves the Smart Search index empty, so
 # com_finder returns "No Results Found" for everything until it is built.
 ddev exec "php public/cli/joomla.php finder:index --no-interaction"
+
+# Language packs for the multilingual lane: the latest full package of each
+# language, from the Joomla update server.
+for LANGUAGE in ${JOOMLA_LANGUAGES:-}; do
+  PACK_URL="$(curl -sL "https://update.joomla.org/language/details${JOOMLA_VERSION%%.*}/${LANGUAGE}_details.xml" \
+    | grep -oP '(?<=<downloadurl type="full" format="zip">)[^<]+' | head -1)"
+  ddev exec php public/cli/joomla.php extension:install --no-interaction --url="$PACK_URL"
+done
 
 # The test accounts, one per access level the suite uses. The Super User was
 # created by the installer above.
