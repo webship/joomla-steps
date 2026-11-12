@@ -33,14 +33,20 @@ module.exports = {
       video: { mode: process.env.WEBSHIP_VIDEO || 'off', dir: './videos', size: { width: 1280, height: 720 }, filenamePattern: '{datetime}.{feature_file}.{scenario}.{status}.{ext}' },
       // JavaScript errors the page raises: 'warn' reports them, 'fail' fails the scenario, 'off' ignores them; @js-fail, @js-warn and @js-off per scenario.
       javascript: { mode: process.env.WEBSHIP_JS_ERROR_MODE || 'warn', levels: ['error'], ignore: '', beforeScenario: false, afterScenario: true },
-      // Joomla accounts used by "a logged in user with ..." (joomla-admin.steps.js).
-      // Override with JOOMLA_ADMIN_USER / JOOMLA_ADMIN_PASSWORD; the defaults
-      // match the Super User that .github/scripts/build-ddev-joomla.sh provisions.
+      // The accounts that "a logged in user with ..." and "logged in to the site with ..."
+      // use, by handle. They are configuration, not test data: the Joomla CLI creates them
+      // once (`php cli/joomla.php user:add`; .github/scripts/build-ddev-joomla.sh does it
+      // for the test site) and a feature never creates or deletes users. Point the suite at
+      // another site with the JOOMLA_* variables.
+      //   admin    Super Users   logs in to the administrator
+      //   manager  Manager       logs in to the administrator, with fewer rights
+      //   editor   Editor        logs in to the site only
+      //   member   Registered    logs in to the site only
       users: {
-        admin: {
-          username: process.env.JOOMLA_ADMIN_USER || 'admin',
-          password: process.env.JOOMLA_ADMIN_PASSWORD || 'Admin123456789!',
-        },
+        admin: { username: process.env.JOOMLA_ADMIN_USER || 'admin', password: process.env.JOOMLA_ADMIN_PASSWORD || 'Admin123456789!' },
+        manager: { username: process.env.JOOMLA_MANAGER_USER || 'manager', password: process.env.JOOMLA_MANAGER_PASSWORD || 'Manager123456789!' },
+        editor: { username: process.env.JOOMLA_EDITOR_USER || 'editor', password: process.env.JOOMLA_EDITOR_PASSWORD || 'Editor123456789!' },
+        member: { username: process.env.JOOMLA_MEMBER_USER || 'member', password: process.env.JOOMLA_MEMBER_PASSWORD || 'Member123456789!' },
       },
       minWaitTime: {
         page: 3000,

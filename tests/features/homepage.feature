@@ -20,7 +20,7 @@ Feature: Home page
   Scenario: Featured article teasers are visible
     Then I should see "Millions of Websites are built on Joomla!"
     And I should see "We love Joomla to the moon and back!"
-    And I should see "We proudly present Joomla Version 5!"
+    And I should see "We proudly present Joomla Version"
 
   @mobile
   Scenario: Main menu is reachable on a mobile viewport

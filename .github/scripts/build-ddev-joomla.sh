@@ -1,23 +1,45 @@
 #!/usr/bin/env bash
-# Builds a fresh default Joomla 5 site (with the "blog" sample content) inside
-# a DDEV project, non-interactively, and exports LAUNCH_URL for the test job.
+# Builds a fresh default Joomla site (Cassiopeia front end, Atum administrator,
+# the "blog" sample content) inside a DDEV project, non-interactively, creates
+# the test accounts with the Joomla CLI, and exports LAUNCH_URL for the test job.
+#
+# Settings (environment variables, all optional):
+#   JOOMLA_VERSION   the release to install            (default 6.2.0)
+#   PHP_VERSION      the PHP version of the container  (default 8.3; Joomla 5 runs on 8.1 or later)
+#   PROJECT_NAME     the DDEV project name             (default joomla-ci)
+#   SITE_DIR         the project folder                (default a new temporary folder)
+#   ADMIN_USER, ADMIN_PASSWORD   the Super User        (default admin / Admin123456789!)
+#   EDITOR_USER, EDITOR_PASSWORD     an Editor account (default editor / Editor123456789!)
+#   MANAGER_USER, MANAGER_PASSWORD   a Manager account (default manager / Manager123456789!)
+#   MEMBER_USER, MEMBER_PASSWORD     a Registered account (default member / Member123456789!)
+# The accounts are configuration: they are created once here and named in
+# cucumber.js; the features never create or delete users.
 set -euo pipefail
 
-PROJECT_NAME="joomla-ci"
-ADMIN_USER="admin"
-ADMIN_PASSWORD="Admin123456789!"
-JOOMLA_ZIP_URL="https://downloads.joomla.org/us/cms/joomla5/5-2-2/Joomla_5-2-2-Stable-Full_Package.zip"
+JOOMLA_VERSION="${JOOMLA_VERSION:-6.2.0}"
+PHP_VERSION="${PHP_VERSION:-8.3}"
+PROJECT_NAME="${PROJECT_NAME:-joomla-ci}"
+ADMIN_USER="${ADMIN_USER:-admin}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-Admin123456789!}"
+EDITOR_USER="${EDITOR_USER:-editor}"
+EDITOR_PASSWORD="${EDITOR_PASSWORD:-Editor123456789!}"
+MANAGER_USER="${MANAGER_USER:-manager}"
+MANAGER_PASSWORD="${MANAGER_PASSWORD:-Manager123456789!}"
+MEMBER_USER="${MEMBER_USER:-member}"
+MEMBER_PASSWORD="${MEMBER_PASSWORD:-Member123456789!}"
+JOOMLA_ZIP_URL="https://github.com/joomla/joomla-cms/releases/download/${JOOMLA_VERSION}/Joomla_${JOOMLA_VERSION}-Stable-Full_Package.zip"
 
-SITE_DIR="$(mktemp -d)"
+SITE_DIR="${SITE_DIR:-$(mktemp -d)}"
+mkdir -p "$SITE_DIR/public"
 cd "$SITE_DIR"
-mkdir -p public
 
 ddev config --project-type=php --project-name="$PROJECT_NAME" --docroot=public \
-  --php-version=8.1 --webserver-type=nginx-fpm
+  --php-version="$PHP_VERSION" --webserver-type=nginx-fpm
 ddev start
 
 curl -sL -o joomla.zip "$JOOMLA_ZIP_URL"
 unzip -q joomla.zip -d public
+rm -f joomla.zip
 
 ddev exec "php public/installation/joomla.php install \
   --site-name=\"Joomla CI\" --admin-user=\"Super User\" --admin-username=\"$ADMIN_USER\" \
@@ -51,9 +73,25 @@ for STEP in 1 2 3 4; do
     "$SITE_URL/administrator/index.php?option=com_ajax&group=sampledata&type=blog&plugin=SampledataApplyStep${STEP}&format=json&${TOKEN}=1"
 done
 
+# The administrator asks every new site to share anonymous statistics with a
+# notice on each page. A test site answers "never" once, so the notice does not
+# sit among the system messages the suite asserts.
+ddev mysql -e "UPDATE jos_extensions SET params='{\"mode\":3}' WHERE element='stats' AND folder='system'"
+
 # Sample data seeds the articles but leaves the Smart Search index empty, so
 # com_finder returns "No Results Found" for everything until it is built.
 ddev exec "php public/cli/joomla.php finder:index --no-interaction"
 
-echo "LAUNCH_URL=$SITE_URL" >> "$GITHUB_ENV"
-echo "Built Joomla site at $SITE_URL"
+# The test accounts, one per access level the suite uses. The Super User was
+# created by the installer above.
+for ACCOUNT in "$EDITOR_USER:$EDITOR_PASSWORD:Editor" "$MANAGER_USER:$MANAGER_PASSWORD:Manager" "$MEMBER_USER:$MEMBER_PASSWORD:Registered"; do
+  IFS=: read -r ACCOUNT_USER ACCOUNT_PASSWORD ACCOUNT_GROUP <<< "$ACCOUNT"
+  ddev exec php public/cli/joomla.php user:add --no-interaction \
+    --username="$ACCOUNT_USER" --name="Test $ACCOUNT_GROUP" --password="$ACCOUNT_PASSWORD" \
+    --email="$ACCOUNT_USER@example.com" --usergroup="$ACCOUNT_GROUP"
+done
+
+if [ -n "${GITHUB_ENV:-}" ]; then
+  echo "LAUNCH_URL=$SITE_URL" >> "$GITHUB_ENV"
+fi
+echo "Built Joomla $JOOMLA_VERSION at $SITE_URL"
