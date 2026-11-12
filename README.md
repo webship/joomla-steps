@@ -83,13 +83,36 @@ Admin ▸ System ▸ Site ▸ Sample Data, or non-interactively via the
 for a scripted example). Without it, the front-office features in this repo
 will fail against an empty homepage.
 
-`tests/features/administrator.feature` logs in through the `users` registry
-in `cucumber.js` (`worldParameters.users.admin`), which defaults to `admin` /
-`Admin123456789!`, the Super User `build-ddev-joomla.sh` provisions
-(Joomla's installer rejects passwords under 12 characters, so a plain
-"admin" won't install). Point `LAUNCH_URL` at a different site and set
-`JOOMLA_ADMIN_USER` / `JOOMLA_ADMIN_PASSWORD` to that site's Super User
-credentials; no password needs to live in a feature file.
+## Accounts
+
+Feature files never carry a credential. The `users` registry of `cucumber.js`
+maps a handle to an account, and the steps take the handle
+(`Given I am a logged in user with the "admin" user`). The accounts are
+configuration, not test data: they are created once with the Joomla command line
+(`php cli/joomla.php user:add`), and a feature never creates or deletes a user.
+
+| Handle | Group | Variables |
+| --- | --- | --- |
+| `admin` | Super Users | `JOOMLA_ADMIN_USER`, `JOOMLA_ADMIN_PASSWORD` |
+| `manager` | Manager | `JOOMLA_MANAGER_USER`, `JOOMLA_MANAGER_PASSWORD` |
+| `editor` | Editor | `JOOMLA_EDITOR_USER`, `JOOMLA_EDITOR_PASSWORD` |
+| `member` | Registered | `JOOMLA_MEMBER_USER`, `JOOMLA_MEMBER_PASSWORD` |
+
+Joomla rejects passwords shorter than 12 characters.
+
+## A test site
+
+`.github/scripts/build-ddev-joomla.sh` builds a default Joomla site in a DDEV
+project, applies the "blog" sample data, builds the Smart Search index and
+creates the four accounts. It is what CI runs.
+
+```bash
+SITE_DIR=$HOME/joomla-test PROJECT_NAME=joomla-test .github/scripts/build-ddev-joomla.sh
+```
+
+`JOOMLA_VERSION` (default 6.2.0), `PHP_VERSION` (default 8.3), `PROJECT_NAME`,
+`SITE_DIR` and the `ADMIN_`, `MANAGER_`, `EDITOR_` and `MEMBER_` user and password
+variables change what it builds.
 
 ## Step catalogue (summary)
 
@@ -127,7 +150,7 @@ the JSDoc block above each step in
 
 ## Running the tests in this repo
 
-Point `LAUNCH_URL` at any Joomla site running the default "blog" sample
+Point `LAUNCH_URL` at any Joomla 5 or 6 site running the default "blog" sample
 content (CI builds one from scratch with DDEV — see
 [`.github/workflows/test.yml`](.github/workflows/test.yml)):
 
