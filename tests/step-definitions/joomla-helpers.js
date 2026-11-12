@@ -377,6 +377,220 @@ async function acceptConfirmation(world) {
   await smartSettle(world.page, (world.minWaitTime && world.minWaitTime.page) || 3000);
 }
 
+/**
+ * Wait for the outcome of an action that ends in a system message: return the
+ * text of the first success message, or throw with the text of the first error
+ * or warning. The stock "Help us make Joomla! better!" notice is an info
+ * message and is ignored.
+ *
+ * @param {object} world
+ * @param {string} what - What was done, for the error ("save the article").
+ * @returns {Promise<string>}
+ */
+async function awaitOutcome(world, what) {
+  const container = world.page.locator('#system-message-container joomla-alert[type="success"], #system-message-container joomla-alert[type="danger"], #system-message-container joomla-alert[type="warning"]');
+  try {
+    await container.first().waitFor({ state: 'visible', timeout: budget(world) });
+  } catch (err) {
+    throw friendly({
+      message: `Could not ${what}: the page showed no confirmation message.`,
+      cause: err,
+      hint: 'Joomla confirms an action with a success message; if the page shows a validation hint on a field, the form was not submitted.',
+    });
+  }
+  // An action can answer with a success and a warning together ("Article saved."
+  // and "Alias already existed so a number was added"): the success wins; an
+  // error never does.
+  const messages = await container.evaluateAll((els) => els.map((el) => ({ type: el.getAttribute('type'), text: (el.innerText || '').replace(/\s+/g, ' ').trim() })));
+  const failure = messages.find((entry) => entry.type === 'danger') || (messages.some((entry) => entry.type === 'success') ? null : messages[0]);
+  if (failure) {
+    throw friendly({ message: `Could not ${what}: Joomla answered "${failure.text}".`, hint: 'Fix the cause named in the message; the data of the scenario may be missing or already in use.' });
+  }
+  return messages.find((entry) => entry.type === 'success').text;
+}
+
+
+// ---------------------------------------------------------------------------
+// Forms: tabs, labels, fancy selects, switchers, the editor
+// ---------------------------------------------------------------------------
+
+/**
+ * A RegExp for a field label: the text, with the star of a required field
+ * allowed after it.
+ *
+ * @param {string} text
+ * @returns {RegExp}
+ */
+function labelPattern(text) {
+  return new RegExp('^\\s*' + escapeRegExp(text) + '(\\s*\\*)?\\s*$', 'i');
+}
+
+/**
+ * The form control a label points at, found by the label text (or by the id of
+ * the control itself). The control can be hidden: Joomla hides the select of a
+ * fancy select behind its own widget, and a tab hides its fields.
+ *
+ * @param {object} world
+ * @param {string} label
+ * @returns {Promise<import('playwright').Locator>}
+ */
+async function controlByLabel(world, label) {
+  const page = world.page;
+  const byId = page.locator(`[id="${label}"]`);
+  if (await byId.count()) return byId.first();
+  const labels = page.locator('label').filter({ hasText: labelPattern(label) });
+  const count = await labels.count();
+  for (let index = 0; index < count; index++) {
+    const id = await labels.nth(index).getAttribute('for');
+    if (id && (await page.locator(`[id="${id}"]`).count())) return page.locator(`[id="${id}"]`).first();
+  }
+  throw friendly({
+    message: `There is no field labelled "${label}" on the page.`,
+    hint: 'Use the label the form shows (for example "Title", "Category", "Site Name"), or the id of the field ("jform_title"); open the form first.',
+  });
+}
+
+/**
+ * Open the tab that holds a field, when the field is hidden by a tab of the
+ * form (`joomla-tab`).
+ *
+ * @param {object} world
+ * @param {import('playwright').Locator} locator
+ */
+async function revealField(world, locator) {
+  if (await locator.first().isVisible()) return;
+  const tabId = await locator.first().evaluate((el) => {
+    const panel = el.closest('joomla-tab-element');
+    return panel ? panel.id : null;
+  });
+  if (tabId) {
+    await world.page.locator(`joomla-tab button[aria-controls="${tabId}"]`).first().click();
+    await locator.first().waitFor({ state: 'visible', timeout: budget(world) }).catch(() => {});
+  }
+}
+
+/**
+ * Open a tab of a form by its text ("Publishing", "Options", "Images and
+ * Links").
+ *
+ * @param {object} world
+ * @param {string} name
+ */
+async function openTab(world, name) {
+  const tab = world.page.locator('joomla-tab button[role="tab"]').filter({ hasText: exactly(name) }).first();
+  try {
+    await tab.waitFor({ state: 'visible', timeout: budget(world) });
+    await tab.click();
+    await world.page.locator('joomla-tab button[role="tab"][aria-selected="true"]').filter({ hasText: exactly(name) }).first().waitFor({ state: 'attached', timeout: budget(world) });
+  } catch (err) {
+    const names = await world.page.locator('joomla-tab button[role="tab"]').allInnerTexts().catch(() => []);
+    throw friendly({ message: `There is no "${name}" tab on the page. The tabs are: ${names.map((text) => text.trim()).filter(Boolean).join(', ') || '(none)'}.`, cause: err, hint: 'Open a form with tabs first (an article, a menu item, the Global Configuration).' });
+  }
+}
+
+/**
+ * Choose an option in a fancy select (`joomla-field-fancy-select`, the searchable
+ * select of Category, Position, Tags, ...), through its own widget so the
+ * change events of the form run.
+ *
+ * @param {object} world
+ * @param {string} label
+ * @param {string} option - The text of the option, or its value.
+ */
+async function chooseFancy(world, label, option) {
+  const control = await controlByLabel(world, label);
+  const widget = world.page.locator('joomla-field-fancy-select').filter({ has: world.page.locator(`[id="${await control.getAttribute('id')}"]`) }).first();
+  if (!(await widget.count())) {
+    await revealField(world, control);
+    await control.selectOption(/^\d+$/.test(option) || (await control.locator(`option[value="${option}"]`).count()) ? { value: option } : { label: option });
+    return;
+  }
+  await revealField(world, widget);
+  await widget.locator('.choices__inner').click();
+  await widget.locator('input.choices__input--cloned, input[type="search"]').first().fill(option).catch(() => {});
+  const choices = widget.locator('.choices__list--dropdown .choices__item--choice');
+  const exact = choices.filter({ hasText: exactly(option) });
+  const byValue = widget.locator(`.choices__list--dropdown .choices__item--choice[data-value="${option}"]`);
+  const target = (await byValue.count()) ? byValue.first() : (await exact.count()) ? exact.first() : choices.filter({ hasText: option }).first();
+  try {
+    await target.waitFor({ state: 'visible', timeout: budget(world) });
+  } catch (err) {
+    const available = await choices.allInnerTexts().catch(() => []);
+    throw friendly({ message: `The "${label}" field has no option "${option}". It offers: ${available.map((text) => text.trim()).filter(Boolean).join(', ') || '(nothing)'}.`, cause: err, hint: 'Use the text of an option as the field shows it.' });
+  }
+  await target.click();
+  await smartSettle(world.page, (world.minWaitTime && world.minWaitTime.page) || 3000);
+}
+
+/**
+ * Set a switcher (`fieldset` with a `.switcher` of two or more radio buttons,
+ * such as Featured: No/Yes) or a radio button group to an option.
+ *
+ * @param {object} world
+ * @param {string} label
+ * @param {string} option
+ */
+async function setSwitcher(world, label, option) {
+  const group = world.page.locator('fieldset').filter({ has: world.page.locator('legend', { hasText: labelPattern(label) }) }).filter({ has: world.page.locator('input[type="radio"]') }).first();
+  if (!(await group.count())) {
+    throw friendly({ message: `There is no switcher or radio group labelled "${label}" on the page.`, hint: 'Use the label the form shows (the legend of the field, for example "Featured", "Site Offline").' });
+  }
+  await revealField(world, group);
+  const choice = group.locator('label').filter({ hasText: exactly(option) }).first();
+  if (!(await choice.count())) {
+    const options = await group.locator('label').allInnerTexts();
+    throw friendly({ message: `The "${label}" switcher has no option "${option}". It offers: ${options.map((text) => text.trim()).join(', ')}.`, hint: 'Use the text of an option as the switcher shows it (for example "Yes" or "No").' });
+  }
+  await choice.click();
+}
+
+/**
+ * The editor instance a field label (or id) points at, or the only editor of
+ * the page. Joomla registers every editor (TinyMCE, CodeMirror, the plain
+ * textarea) in `Joomla.editors.instances`, so one API fits them all.
+ *
+ * @param {object} world
+ * @param {string} [field]
+ * @returns {Promise<string>} The id of the editor.
+ */
+async function editorId(world, field) {
+  const ids = await world.page.evaluate(() => Object.keys((window.Joomla && window.Joomla.editors && window.Joomla.editors.instances) || {}));
+  if (!ids.length) throw friendly({ message: 'There is no editor on the page.', hint: 'Open a form with an editor first (an article, a Custom module).' });
+  if (!supplied(field)) {
+    if (ids.length > 1) throw friendly({ message: `The page has ${ids.length} editors (${ids.join(', ')}).`, hint: 'Name the one to fill: "I fill in the rich text editor field "Article Text" with ...".' });
+    return ids[0];
+  }
+  if (ids.includes(field)) return field;
+  const control = await controlByLabel(world, field);
+  const id = await control.getAttribute('id');
+  if (!ids.includes(id)) throw friendly({ message: `The field "${field}" is not an editor. The editors are: ${ids.join(', ')}.`, hint: 'Use the label or the id of the editor field.' });
+  return id;
+}
+
+/**
+ * Write the content of an editor.
+ *
+ * @param {object} world
+ * @param {string|undefined} field
+ * @param {string} value
+ */
+async function setEditor(world, field, value) {
+  const id = await editorId(world, field);
+  await world.page.evaluate(({ id: editor, value: text }) => window.Joomla.editors.instances[editor].setValue(text), { id, value });
+}
+
+/**
+ * Read the content of an editor.
+ *
+ * @param {object} world
+ * @param {string|undefined} field
+ * @returns {Promise<string>}
+ */
+async function getEditor(world, field) {
+  const id = await editorId(world, field);
+  return world.page.evaluate((editor) => window.Joomla.editors.instances[editor].getValue(), id);
+}
+
 module.exports = {
   budget,
   supplied,
@@ -398,4 +612,14 @@ module.exports = {
   requireAdminSession,
   clickToolbarButton,
   acceptConfirmation,
+  awaitOutcome,
+  labelPattern,
+  controlByLabel,
+  revealField,
+  openTab,
+  chooseFancy,
+  setSwitcher,
+  editorId,
+  setEditor,
+  getEditor,
 };

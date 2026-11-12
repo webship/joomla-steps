@@ -6,6 +6,7 @@
   "files": [
     "tests/step-definitions/*.js",
     "tests/features",
+    "tests/fixtures",
     "README.md",
     "LICENSE"
   ],
