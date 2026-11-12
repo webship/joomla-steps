@@ -9,6 +9,7 @@ Feature: Site search
     Given I am on the homepage
     When I search the site for "joomla"
     Then I should see "Joomla" in the search results
+    And I should see at least 1 search result
 
   Scenario: Search for a word from an article the front page lists
     Given I am on the homepage
@@ -19,6 +20,23 @@ Feature: Site search
     Given I am on the homepage
     When I search the site for "qzxjvwk-no-such-term"
     Then I should see no search results
+    And I should not see "qzxjvwk" in the search results
+
+  Scenario: A search result opens its article
+    Given I am on the search page
+    When I search the site for "typography"
+    And I open the search result "Typography"
+    Then I should be viewing the "Typography" article
+
+  Scenario: The first search result opens
+    Given I am on the homepage
+    When I search the site for "blog"
+    And I open the first search result
+    Then I should not be on the 404 page
+
+  Scenario: The search page has its own form
+    Given I am on the search page
+    Then I should see the search form
 
   @mobile
   Scenario: Search on a mobile viewport
