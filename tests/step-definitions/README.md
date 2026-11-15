@@ -2,7 +2,7 @@
 
 | File | Covers |
 | --- | --- |
-| `joomla.steps.js` | The front end: menus, articles, breadcrumbs, named pages, login and logout of the site, system messages, Smart Search, the 404 page, modules, the language switcher. |
+| `joomla.steps.js` | The front end: login and logout of the site, menus, articles, breadcrumbs, named pages, system messages, Smart Search, the 404 page, modules, the language switcher. |
 | `joomla-admin.steps.js` | The administrator: login and logout, the session, named pages, the page title, the sidebar menu, the toolbar, the Dashboard, the Joomla version. |
 | `joomla-content.steps.js` | Administrator content: list views, the lifecycle of articles, categories, menus, menu items and modules, form controls, the Media Manager. |
 | `joomla-system.steps.js` | Administrator system: users, groups, access levels, cache, global check-in. |
