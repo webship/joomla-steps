@@ -1,3 +1,5 @@
+<p align="center"><img src="https://raw.githubusercontent.com/webship/joomla-steps/2.0.x/assets/logo.svg" alt="Joomla logo" width="96"></p>
+
 # joomla-steps
 
 Cucumber step definitions for testing Joomla sites with
@@ -343,3 +345,7 @@ defined exactly once. CI runs it before the suite.
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Logo
+
+The Joomla logo in this README comes from Simple Icons 16.37.0 (CC0-1.0), filled with the colour the set lists for the brand. The Joomla name and logo are trademarks of their owner; this pack is not affiliated with or endorsed by them.
