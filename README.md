@@ -181,7 +181,7 @@ expression and at least five Gherkin examples. This is the summary.
 | `I should see( at least) <n> search results` | Then |
 | `I open the search result "<title>"` and `I open the first search result` | When |
 | `I should( not) be on the (404\|page not found\|403\|access denied) page` | Then |
-| `the site should( not) be running Joomla` | Then |
+| `the page generator should( not) (be\|start with\|contain) "<text>"` | Then |
 | `I should( not) see the "<title>" module` | Then |
 | `I should( not) see the language switcher` | Then |
 | `I switch the site language to "<language>"` | When |
@@ -213,7 +213,7 @@ template of the administrator, and an error message inside the normal template
 | `I click the "<button>" toolbar button` | When |
 | `I should( not) see the "<button>" toolbar button` | Then |
 | `I should( not) see the "<title>" dashboard module` | Then |
-| `the Joomla version should( not) (be\|start with) "<version>"` | Then |
+| `the CMS version should( not) (be\|start with) "<version>"` | Then |
 
 The named pages are: dashboard, articles, featured articles, categories, media,
 site modules, administrator modules, menus, menu items, users, groups, access

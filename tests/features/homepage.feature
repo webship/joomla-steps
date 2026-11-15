@@ -13,7 +13,7 @@ Feature: Home page
     And the breadcrumb should show "Home"
 
   Scenario: The page names Joomla as its generator
-    Then the site should be running Joomla
+    Then the page generator should contain "Joomla"
 
   Scenario: Main menu is present
     Then I should see the "Blog" menu item
