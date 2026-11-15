@@ -49,9 +49,9 @@ Feature: Administrator dashboard, menu and pages
       | Clear Cache          | Maintenance: Clear Cache     |
       | Global Check-in      | Maintenance: Global Check-in |
 
-  Scenario: The system information page reports the Joomla version
-    Then the Joomla version should start with "6"
-    And the Joomla version should not start with "3"
+  Scenario: The system information page reports the version of the CMS
+    Then the CMS version should start with "6"
+    And the CMS version should not start with "3"
 
   Scenario: A Manager does not see the Super User screens
     Given I am a logged in user with the "manager" user

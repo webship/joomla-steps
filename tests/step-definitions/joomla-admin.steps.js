@@ -584,17 +584,17 @@ Then(/^(I |we )*should( not)* see the "([^"]*)?" dashboard module$/, async funct
 });
 
 /**
- * Assert the Joomla version the System Information page reports. "be" compares
+ * Assert the version of the CMS that the System Information page reports. "be" compares
  * the whole version ("6.2.0"), "start with" a part of it ("6" or "6.2").
  *
- * Example #1: Then the Joomla version should start with "6"
- * Example #2: Then the Joomla version should be "6.2.0"
- * Example #3: Then the Joomla version should start with "6.2"
- * Example #4: And the Joomla version should not start with "3"
- * Example #5: Then the Joomla version should not be "4.0.0"
+ * Example #1: Then the CMS version should start with "6"
+ * Example #2: Then the CMS version should be "6.2.0"
+ * Example #3: Then the CMS version should start with "6.2"
+ * Example #4: And the CMS version should not start with "3"
+ * Example #5: Then the CMS version should not be "4.0.0"
  *
  */
-Then(/^the Joomla version should( not)* (be|start with) "([^"]*)?"$/, async function (notCase, mode, expected) {
+Then(/^the CMS version should( not)* (be|start with) "([^"]*)?"$/, async function (notCase, mode, expected) {
   await openAdminPage(this, 'System Information');
   const row = this.page.locator('tr', { has: this.page.locator('th, td', { hasText: /^\s*Joomla! Version\s*$/ }) }).first();
   const text = await row.innerText({ timeout: budget(this) }).catch((err) => {
@@ -605,7 +605,7 @@ Then(/^the Joomla version should( not)* (be|start with) "([^"]*)?"$/, async func
   const ok = mode === 'be' ? found === expected : found === expected || found.startsWith(expected + '.');
   if (ok === !!notCase) {
     throw friendly({
-      message: `Expected the Joomla version ${notCase ? 'not ' : ''}to ${mode} "${expected}", but it is ${found}.`,
+      message: `Expected the CMS version ${notCase ? 'not ' : ''}to ${mode} "${expected}", but it is ${found}.`,
       hint: 'The version is the one the System Information page reports for the site under test.',
     });
   }

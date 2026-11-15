@@ -772,21 +772,27 @@ Then(/^(I |we )*should( not)* be on the (404|page not found|403|access denied) p
 // ---------------------------------------------------------------------------
 
 /**
- * Assert the page announces Joomla as its generator (the `generator` meta tag).
+ * Assert what the page's generator meta tag says: the whole content
+ * ("be"), its start ("start with") or a part of it ("contain"), without
+ * regard to case. The name of the generator is a value of the step.
  *
- * Example #1: Then the site should be running Joomla
- * Example #2: Then the site should not be running Joomla
- * Example #3: And the site should be running Joomla
- * Example #4: Then the site should be running Joomla
- * Example #5: And the site should not be running Joomla
+ * Example #1: Then the page generator should contain "Joomla"
+ * Example #2: Then the page generator should start with "Joomla!"
+ * Example #3: And the page generator should be "Joomla! - Open Source Content Management"
+ * Example #4: Then the page generator should not contain "WordPress"
+ * Example #5: And page generator should contain "Joomla"
  *
  */
-Then(/^the site should( not)* be running Joomla$/, async function (notCase) {
-  const generator = await this.page.locator('meta[name="generator"]').first().getAttribute('content', { timeout: 2000 }).catch(() => null);
-  const isJoomla = !!generator && /joomla/i.test(generator);
-  if (isJoomla === !!notCase) {
+Then(/^(?:the )?page generator should( not)* (be|start with|contain) "([^"]*)"$/, async function (notCase, mode, expected) {
+  const content = await this.page.locator('meta[name="generator"]').first().getAttribute('content', { timeout: 3000 }).catch(() => null);
+  const found = (content || '').toLowerCase();
+  const wanted = expected.toLowerCase();
+  const matches = content !== null && (mode === 'be' ? found === wanted : mode === 'start with' ? found.startsWith(wanted) : found.includes(wanted));
+  if (matches === !!notCase) {
     throw friendly({
-      message: notCase ? `Expected a site that is not Joomla, but the generator is "${generator}".` : `Expected the generator meta tag to name Joomla, but it is ${generator ? `"${generator}"` : 'missing'}.`,
+      message: notCase
+        ? `Expected the page generator not to ${mode} "${expected}", but the generator is "${content}".`
+        : `Expected the page generator to ${mode} "${expected}", but it is ${content === null ? 'missing' : `"${content}"`}.`,
       hint: 'The generator tag can be changed in the Global Configuration (Site Meta) or removed by a template.',
     });
   }
