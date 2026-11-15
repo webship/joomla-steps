@@ -1,8 +1,8 @@
 'use strict';
 
-// Joomla front end (site) step definitions: the main menu (including the
-// collapsed mobile menu), articles and breadcrumbs, the Smart Search component
-// (com_finder), logging in and out of the site with the users registry, the
+// Joomla front end (site) step definitions: logging in and out of the site
+// with the users registry, the main menu (including the collapsed mobile menu),
+// articles and breadcrumbs, the Smart Search component (com_finder), the
 // system messages, the 404 page and the language switcher.
 //
 // The administrator control panel has its own step files: joomla-admin.steps.js
@@ -50,6 +50,201 @@ async function menuLink(world, name) {
   await loose.first().waitFor({ state: 'attached', timeout: budget(world) }).catch(() => {});
   return (await exact.count()) ? exact.first() : loose.first();
 }
+
+// ---------------------------------------------------------------------------
+// Logging in and out of the site
+// ---------------------------------------------------------------------------
+
+// The site and the administrator keep separate sessions: an account that is
+// logged in to the administrator is not logged in to the site, and the other
+// way round.
+
+/**
+ * The state of the site session, read with the browser's own cookies and
+ * without leaving the page the scenario is on: the login view of com_users
+ * shows the logout form to a logged in user and the login form to a visitor.
+ *
+ * @param {object} world
+ * @returns {Promise<boolean>}
+ */
+async function siteSessionActive(world) {
+  const response = await world.context.request.get(siteUrl(world, 'index.php?option=com_users&view=login'));
+  const html = await response.text();
+  return /com-users-logout__form/.test(html);
+}
+
+/**
+ * The login form of the site: the one of the login page when the page is
+ * showing it, the login module otherwise.
+ *
+ * @param {object} world
+ * @returns {Promise<{form: import('playwright').Locator, user: import('playwright').Locator, password: import('playwright').Locator, submit: import('playwright').Locator}>}
+ */
+async function siteLoginForm(world) {
+  const page = world.page;
+  let form = page.locator('#com-users-login__form');
+  if (!(await form.count()) || !(await form.first().isVisible())) {
+    form = page.locator('form.mod-login:visible').first();
+  }
+  if (!(await form.count())) {
+    await open(world, siteUrl(world, SITE_PAGES.login));
+    form = page.locator('#com-users-login__form');
+  }
+  return {
+    form,
+    user: form.locator('input[name="username"]'),
+    password: form.locator('input[name="password"]'),
+    submit: form.locator('button[type="submit"]'),
+  };
+}
+
+async function submitSiteLogin(world, username, password) {
+  const page = world.page;
+  const login = await siteLoginForm(world);
+  await actOrExplain('log in to the site as', username, async () => {
+    await login.user.first().waitFor({ state: 'visible', timeout: budget(world) });
+    await login.user.first().fill(username);
+    await login.password.first().fill(password);
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {}),
+      login.submit.first().click(),
+    ]);
+  }, 'The login form is the one of the login page (`#com-users-login__form`) or the login module (`form.mod-login`); open the login page first.');
+  await smartSettle(page, (world.minWaitTime && world.minWaitTime.page) || 3000);
+}
+
+/**
+ * Log in to the site with a username and a password, through the login form of
+ * the page (the login page or a login module). When no login form is on the
+ * page, the login page is opened first.
+ *
+ * Example #1: When I log in to the site as "member" with password "Member123456789!"
+ * Example #2: When I log in to the site as "editor" with password "Editor123456789!"
+ * Example #3: When we log in to the site as "member" with password "wrong-password"
+ * Example #4: And I log in to the site as "manager" with password "Manager123456789!"
+ * Example #5: When log in to the site as "member" with password "Member123456789!"
+ *
+ */
+When(/^(I |we )*log in to the site as "([^"]*)?" with password "([^"]*)?"$/, { timeout: 60000 }, async function (pronounCase, username, password) {
+  await submitSiteLogin(this, username, password);
+});
+
+/**
+ * Log in to the site as an account of the `users` registry in cucumber.js
+ * (`worldParameters.users`), so no credential lives in a feature file. The
+ * login page is opened first; a session that is already open is closed before.
+ * The accounts are created once with the Joomla CLI (`php cli/joomla.php
+ * user:add`); a feature never creates users.
+ *
+ * Example #1: Given I am logged in to the site with the "member" user
+ * Example #2: Given we are logged in to the site with the "editor" user
+ * Example #3: Given I am logged in to the site with "member"
+ * Example #4: And logged in to the site with the username "manager"
+ * Example #5: Given I am logged in to the site with the username "member" user
+ *
+ */
+Given(/^(I am |we are )*logged in to the site with( the)*( username)* "([^"]*)?"( user)*$/, { timeout: 90000 }, async function (pronounCase, theCase, usernameCase, handle, userCase) {
+  const { username, password } = resolveUser(this, handle);
+  await open(this, siteUrl(this, SITE_PAGES.login));
+  if (await this.page.locator('#com-users-logout__form').count()) {
+    await Promise.all([
+      this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {}),
+      this.page.locator('#com-users-logout__form button[type="submit"]').click(),
+    ]);
+    await open(this, siteUrl(this, SITE_PAGES.login));
+  }
+  await submitSiteLogin(this, username, password);
+  if (!(await siteSessionActive(this))) {
+    throw friendly({
+      message: `The login of "${username}" (registry handle "${handle}") did not open a site session.`,
+      hint: 'Check worldParameters.users in cucumber.js and that the account exists on the site (php cli/joomla.php user:list) and is not blocked.',
+    });
+  }
+});
+
+/**
+ * Log out of the site: open the login view, which shows the logout form to a
+ * logged in user, and press "Log out".
+ *
+ * Example #1: When I log out of the site
+ * Example #2: When we log out of the site
+ * Example #3: And I log out of the site
+ * Example #4: When log out of the site
+ * Example #5: And we log out of the site
+ *
+ */
+When(/^(I |we )*log out of the site$/, async function (pronounCase) {
+  await open(this, siteUrl(this, SITE_PAGES.login));
+  const logout = this.page.locator('#com-users-logout__form button[type="submit"], form.mod-login-logout button[type="submit"]').first();
+  await actOrExplain('log out of the site', 'the logout form', async () => {
+    await logout.waitFor({ state: 'visible', timeout: budget(this) });
+    await Promise.all([
+      this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {}),
+      logout.click(),
+    ]);
+  }, 'Nobody is logged in to the site; use "Given I am logged in to the site with the "member" user" first.');
+  await smartSettle(this.page, 1500);
+});
+
+/**
+ * Assert a session is (or is not) open on the site, optionally for a given
+ * account (a username, or a handle of the users registry). The check asks the
+ * site with the browser's cookies, so the page the scenario is on stays where
+ * it is.
+ *
+ * Example #1: Then I should be logged in to the site
+ * Example #2: Then I should not be logged in to the site
+ * Example #3: Then we should be logged in to the site as "member"
+ * Example #4: And I should be logged in to the site as "editor"
+ * Example #5: Then should not be logged in to the site
+ *
+ */
+Then(/^(I |we )*should( not)* be logged in to the site(?: as "([^"]*)")?$/, async function (pronounCase, notCase, who) {
+  const wanted = !notCase;
+  const deadline = Date.now() + budget(this);
+  let active = await siteSessionActive(this);
+  while (active !== wanted && Date.now() < deadline) {
+    await this.page.waitForTimeout(500);
+    active = await siteSessionActive(this);
+  }
+  if (active !== wanted) {
+    throw friendly({
+      message: wanted ? 'Expected a session on the site, but nobody is logged in.' : 'Expected nobody to be logged in to the site, but a session is open.',
+      hint: wanted ? 'Log in first with "Given I am logged in to the site with the "member" user".' : 'Log out first with "When I log out of the site", or start with "Given I am not logged in".',
+    });
+  }
+  if (supplied(who) && wanted) {
+    const users = (this.parameters && this.parameters.users) || {};
+    const username = users[who] && users[who].username ? users[who].username : who;
+    const response = await this.context.request.get(siteUrl(this, 'index.php?option=com_users&view=profile'));
+    const html = await response.text();
+    if (!new RegExp('<dd[^>]*>\\s*' + username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*</dd>').test(html)) {
+      throw friendly({
+        message: `Expected the site session to belong to "${username}", but the profile page shows another account.`,
+        hint: 'Log out and log in as the account the scenario needs.',
+      });
+    }
+  }
+});
+
+/**
+ * Assert the login was refused with Joomla's "Username and password do not
+ * match" message on the site.
+ *
+ * Example #1: Then I should see an invalid login error on the site
+ * Example #2: Then we should see an invalid login error on the site
+ * Example #3: And I should not see an invalid login error on the site
+ * Example #4: Then should see an invalid login error on the site
+ * Example #5: And we should not see an invalid login error on the site
+ *
+ */
+Then(/^(I |we )*should( not)* see an invalid login error on the site$/, async function (pronounCase, notCase) {
+  await assertPresence(alerts(this, 'warning', 'Username and password do not match'), notCase, {
+    label: 'an invalid-login alert ("Username and password do not match")',
+    hint: 'The alert is a <joomla-alert type="warning"> element; check the wording if the site runs another language, and that the login form was submitted.',
+    timeout: budget(this),
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Main menu navigation
@@ -265,201 +460,6 @@ Then(/^(I |we )*should( not)* see the (login|password reset|username reminder|se
   await assertPresence(this.page.locator(selectors[name]), notCase, {
     label: `the ${name} form`,
     hint: 'Open the page that carries the form first; the login form is the login page or the login module, the search form is the Smart Search page or the search module.',
-    timeout: budget(this),
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Logging in and out of the site
-// ---------------------------------------------------------------------------
-
-// The site and the administrator keep separate sessions: an account that is
-// logged in to the administrator is not logged in to the site, and the other
-// way round.
-
-/**
- * The state of the site session, read with the browser's own cookies and
- * without leaving the page the scenario is on: the login view of com_users
- * shows the logout form to a logged in user and the login form to a visitor.
- *
- * @param {object} world
- * @returns {Promise<boolean>}
- */
-async function siteSessionActive(world) {
-  const response = await world.context.request.get(siteUrl(world, 'index.php?option=com_users&view=login'));
-  const html = await response.text();
-  return /com-users-logout__form/.test(html);
-}
-
-/**
- * The login form of the site: the one of the login page when the page is
- * showing it, the login module otherwise.
- *
- * @param {object} world
- * @returns {Promise<{form: import('playwright').Locator, user: import('playwright').Locator, password: import('playwright').Locator, submit: import('playwright').Locator}>}
- */
-async function siteLoginForm(world) {
-  const page = world.page;
-  let form = page.locator('#com-users-login__form');
-  if (!(await form.count()) || !(await form.first().isVisible())) {
-    form = page.locator('form.mod-login:visible').first();
-  }
-  if (!(await form.count())) {
-    await open(world, siteUrl(world, SITE_PAGES.login));
-    form = page.locator('#com-users-login__form');
-  }
-  return {
-    form,
-    user: form.locator('input[name="username"]'),
-    password: form.locator('input[name="password"]'),
-    submit: form.locator('button[type="submit"]'),
-  };
-}
-
-async function submitSiteLogin(world, username, password) {
-  const page = world.page;
-  const login = await siteLoginForm(world);
-  await actOrExplain('log in to the site as', username, async () => {
-    await login.user.first().waitFor({ state: 'visible', timeout: budget(world) });
-    await login.user.first().fill(username);
-    await login.password.first().fill(password);
-    await Promise.all([
-      page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {}),
-      login.submit.first().click(),
-    ]);
-  }, 'The login form is the one of the login page (`#com-users-login__form`) or the login module (`form.mod-login`); open the login page first.');
-  await smartSettle(page, (world.minWaitTime && world.minWaitTime.page) || 3000);
-}
-
-/**
- * Log in to the site with a username and a password, through the login form of
- * the page (the login page or a login module). When no login form is on the
- * page, the login page is opened first.
- *
- * Example #1: When I log in to the site as "member" with password "Member123456789!"
- * Example #2: When I log in to the site as "editor" with password "Editor123456789!"
- * Example #3: When we log in to the site as "member" with password "wrong-password"
- * Example #4: And I log in to the site as "manager" with password "Manager123456789!"
- * Example #5: When log in to the site as "member" with password "Member123456789!"
- *
- */
-When(/^(I |we )*log in to the site as "([^"]*)?" with password "([^"]*)?"$/, { timeout: 60000 }, async function (pronounCase, username, password) {
-  await submitSiteLogin(this, username, password);
-});
-
-/**
- * Log in to the site as an account of the `users` registry in cucumber.js
- * (`worldParameters.users`), so no credential lives in a feature file. The
- * login page is opened first; a session that is already open is closed before.
- * The accounts are created once with the Joomla CLI (`php cli/joomla.php
- * user:add`); a feature never creates users.
- *
- * Example #1: Given I am logged in to the site with the "member" user
- * Example #2: Given we are logged in to the site with the "editor" user
- * Example #3: Given I am logged in to the site with "member"
- * Example #4: And logged in to the site with the username "manager"
- * Example #5: Given I am logged in to the site with the username "member" user
- *
- */
-Given(/^(I am |we are )*logged in to the site with( the)*( username)* "([^"]*)?"( user)*$/, { timeout: 90000 }, async function (pronounCase, theCase, usernameCase, handle, userCase) {
-  const { username, password } = resolveUser(this, handle);
-  await open(this, siteUrl(this, SITE_PAGES.login));
-  if (await this.page.locator('#com-users-logout__form').count()) {
-    await Promise.all([
-      this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {}),
-      this.page.locator('#com-users-logout__form button[type="submit"]').click(),
-    ]);
-    await open(this, siteUrl(this, SITE_PAGES.login));
-  }
-  await submitSiteLogin(this, username, password);
-  if (!(await siteSessionActive(this))) {
-    throw friendly({
-      message: `The login of "${username}" (registry handle "${handle}") did not open a site session.`,
-      hint: 'Check worldParameters.users in cucumber.js and that the account exists on the site (php cli/joomla.php user:list) and is not blocked.',
-    });
-  }
-});
-
-/**
- * Log out of the site: open the login view, which shows the logout form to a
- * logged in user, and press "Log out".
- *
- * Example #1: When I log out of the site
- * Example #2: When we log out of the site
- * Example #3: And I log out of the site
- * Example #4: When log out of the site
- * Example #5: And we log out of the site
- *
- */
-When(/^(I |we )*log out of the site$/, async function (pronounCase) {
-  await open(this, siteUrl(this, SITE_PAGES.login));
-  const logout = this.page.locator('#com-users-logout__form button[type="submit"], form.mod-login-logout button[type="submit"]').first();
-  await actOrExplain('log out of the site', 'the logout form', async () => {
-    await logout.waitFor({ state: 'visible', timeout: budget(this) });
-    await Promise.all([
-      this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {}),
-      logout.click(),
-    ]);
-  }, 'Nobody is logged in to the site; use "Given I am logged in to the site with the "member" user" first.');
-  await smartSettle(this.page, 1500);
-});
-
-/**
- * Assert a session is (or is not) open on the site, optionally for a given
- * account (a username, or a handle of the users registry). The check asks the
- * site with the browser's cookies, so the page the scenario is on stays where
- * it is.
- *
- * Example #1: Then I should be logged in to the site
- * Example #2: Then I should not be logged in to the site
- * Example #3: Then we should be logged in to the site as "member"
- * Example #4: And I should be logged in to the site as "editor"
- * Example #5: Then should not be logged in to the site
- *
- */
-Then(/^(I |we )*should( not)* be logged in to the site(?: as "([^"]*)")?$/, async function (pronounCase, notCase, who) {
-  const wanted = !notCase;
-  const deadline = Date.now() + budget(this);
-  let active = await siteSessionActive(this);
-  while (active !== wanted && Date.now() < deadline) {
-    await this.page.waitForTimeout(500);
-    active = await siteSessionActive(this);
-  }
-  if (active !== wanted) {
-    throw friendly({
-      message: wanted ? 'Expected a session on the site, but nobody is logged in.' : 'Expected nobody to be logged in to the site, but a session is open.',
-      hint: wanted ? 'Log in first with "Given I am logged in to the site with the "member" user".' : 'Log out first with "When I log out of the site", or start with "Given I am not logged in".',
-    });
-  }
-  if (supplied(who) && wanted) {
-    const users = (this.parameters && this.parameters.users) || {};
-    const username = users[who] && users[who].username ? users[who].username : who;
-    const response = await this.context.request.get(siteUrl(this, 'index.php?option=com_users&view=profile'));
-    const html = await response.text();
-    if (!new RegExp('<dd[^>]*>\\s*' + username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*</dd>').test(html)) {
-      throw friendly({
-        message: `Expected the site session to belong to "${username}", but the profile page shows another account.`,
-        hint: 'Log out and log in as the account the scenario needs.',
-      });
-    }
-  }
-});
-
-/**
- * Assert the login was refused with Joomla's "Username and password do not
- * match" message on the site.
- *
- * Example #1: Then I should see an invalid login error on the site
- * Example #2: Then we should see an invalid login error on the site
- * Example #3: And I should not see an invalid login error on the site
- * Example #4: Then should see an invalid login error on the site
- * Example #5: And we should not see an invalid login error on the site
- *
- */
-Then(/^(I |we )*should( not)* see an invalid login error on the site$/, async function (pronounCase, notCase) {
-  await assertPresence(alerts(this, 'warning', 'Username and password do not match'), notCase, {
-    label: 'an invalid-login alert ("Username and password do not match")',
-    hint: 'The alert is a <joomla-alert type="warning"> element; check the wording if the site runs another language, and that the login form was submitted.',
     timeout: budget(this),
   });
 });

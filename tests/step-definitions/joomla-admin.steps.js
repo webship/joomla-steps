@@ -105,22 +105,6 @@ async function submitAdminLogin(world, username, password) {
 // ---------------------------------------------------------------------------
 
 /**
- * Open the Joomla administrator login page (`/administrator`) as an anonymous
- * visitor.
- *
- * Example #1: Given I am on the administrator login page
- * Example #2: Given we are on the administrator login page
- * Example #3: Given I am on the admin login page
- * Example #4: Given on the administrator login page
- * Example #5: Given we are on the admin login page
- *
- */
-Given(/^(I am |we are )*on the admin(?:istrator)* login page$/, async function (pronounCase) {
-  await open(this, siteRoot(this) + '/administrator');
-  await waitForLoginForm(this);
-});
-
-/**
  * Fill in and submit the Joomla administrator login form (`#form-login`) with
  * the given username and password, then wait for the page to settle on either
  * the Dashboard or the login error message.
@@ -168,6 +152,22 @@ Given(/^(I am |we are )*a logged in user with( the)*( username)* "([^"]*)?"( use
       hint: 'Check worldParameters.users in cucumber.js, that the account exists (php cli/joomla.php user:list) and that its group may log in to the administrator (Manager, Administrator or Super Users).',
     });
   }
+});
+
+/**
+ * Open the Joomla administrator login page (`/administrator`) as an anonymous
+ * visitor.
+ *
+ * Example #1: Given I am on the administrator login page
+ * Example #2: Given we are on the administrator login page
+ * Example #3: Given I am on the admin login page
+ * Example #4: Given on the administrator login page
+ * Example #5: Given we are on the admin login page
+ *
+ */
+Given(/^(I am |we are )*on the admin(?:istrator)* login page$/, async function (pronounCase) {
+  await open(this, siteRoot(this) + '/administrator');
+  await waitForLoginForm(this);
 });
 
 /**

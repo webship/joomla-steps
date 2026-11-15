@@ -6,8 +6,8 @@ Cucumber step definitions for testing Joomla sites with
 [webship-js](https://webship.co/docs/webship-js/2.0.x), a BDD browser automation
 harness built on Playwright and Cucumber-js.
 
-`@webship-js/joomla-steps` covers the front end of a Joomla site (menus,
-articles, breadcrumbs, Smart Search, logging in and out, system messages, the 404
+`@webship-js/joomla-steps` covers the front end of a Joomla site (logging in
+and out, menus, articles, breadcrumbs, Smart Search, system messages, the 404
 page) and the administrator control panel (login by account handle, the
 dashboard, the Atum sidebar menu, the toolbar, article, category, menu item and
 module lifecycles, the Media Manager, users, groups and access levels, the
@@ -73,7 +73,7 @@ npm install --save-dev @webship-js/joomla-steps
 
 | Path | Purpose |
 | --- | --- |
-| `tests/step-definitions/joomla.steps.js` | Front end: menus, articles, breadcrumbs, named pages, login and logout of the site, system messages, Smart Search, the 404 page, the generator, modules and the language switcher. |
+| `tests/step-definitions/joomla.steps.js` | Front end: login and logout of the site, menus, articles, breadcrumbs, named pages, system messages, Smart Search, the 404 page, the generator, modules and the language switcher. |
 | `tests/step-definitions/joomla-admin.steps.js` | Administrator: login and logout, the session, named pages, the page title, the sidebar menu, the toolbar, the Dashboard and the Joomla version. |
 | `tests/step-definitions/joomla-content.steps.js` | Administrator content: list views, the lifecycle of articles, categories, menus, menu items and modules, the form controls (editor, fancy selects, switchers, tabs, fields) and the Media Manager. |
 | `tests/step-definitions/joomla-system.steps.js` | Administrator system: users, groups and access levels, cache and global check-in. |
@@ -160,6 +160,11 @@ expression and at least five Gherkin examples. This is the summary.
 
 | Step | Type |
 | --- | --- |
+| `I log in to the site as "<user>" with password "<password>"` | When |
+| `I am logged in to the site with the "<handle>" user` | Given |
+| `I log out of the site` | When |
+| `I should( not) be logged in to the site( as "<user>")` | Then |
+| `I should( not) see an invalid login error on the site` | Then |
 | `I open the "<name>" menu item` | When |
 | `I open the mobile menu` | When |
 | `I should( not) see the "<name>" menu item` | Then |
@@ -168,11 +173,6 @@ expression and at least five Gherkin examples. This is the summary.
 | `the breadcrumb should show "<path>"` | Then |
 | `I am on the (login\|sign-in\|password reset\|username reminder\|profile\|search) page` | Given |
 | `I should( not) see the (login\|password reset\|username reminder\|search) form` | Then |
-| `I log in to the site as "<user>" with password "<password>"` | When |
-| `I am logged in to the site with the "<handle>" user` | Given |
-| `I log out of the site` | When |
-| `I should( not) be logged in to the site( as "<user>")` | Then |
-| `I should( not) see an invalid login error on the site` | Then |
 | `I should( not) see a (success\|info\|warning\|error) message( "<text>")` | Then |
 | `I should see no system messages` | Then |
 | `I search the site for "<term>"` | When |
@@ -197,9 +197,9 @@ template of the administrator, and an error message inside the normal template
 
 | Step | Type |
 | --- | --- |
-| `I am on the administrator login page` | Given |
 | `I log in to the administrator panel as "<user>" with password "<password>"` | When |
 | `I am a logged in user with the "<handle>" user` | Given |
+| `I am on the administrator login page` | Given |
 | `I am not logged in` | Given |
 | `I log out of the administrator panel` | When |
 | `I should( not) see the administrator dashboard` | Then |
