@@ -8,6 +8,7 @@ Feature: Logging in to the site
   Scenario: The login page shows the login form
     Given I am on the login page
     Then I should see the login form
+    And I should not see an invalid login error on the site
 
   Scenario: A registered user logs in with the registry and sees the profile
     Given I am logged in to the site with the "member" user
@@ -15,6 +16,7 @@ Feature: Logging in to the site
     And I should be logged in to the site as "member"
     When I am on the profile page
     Then I should see "Test Registered"
+    And I should not see the login form
 
   Scenario: An editor logs in to the site
     Given I am logged in to the site with the "editor" user

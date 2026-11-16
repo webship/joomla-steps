@@ -14,6 +14,7 @@ Feature: Home page
 
   Scenario: The page names Joomla as its generator
     Then the page generator should contain "Joomla"
+    And the page generator should not contain "Example"
 
   Scenario: Main menu is present
     Then I should see the "Blog" menu item

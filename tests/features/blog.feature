@@ -18,6 +18,7 @@ Feature: Blog page and articles
     Given I am on the homepage
     When I read more of "Joomla"
     Then I should be viewing the "Joomla" article
+    And I should not be viewing the "Millions" article
     And the breadcrumb should show "Home > Sample Layouts > Articles > Joomla"
 
   Scenario: Read another featured article
