@@ -62,6 +62,8 @@ Feature: Articles
     And the field labelled "Alias" should have the value "typography"
     And the rich text editor should contain "Typography"
     And the field labelled "Featured" should have the value "No"
+    And the field labelled "Title" should not have the value "Millions"
+    And the rich text editor should not contain "qzxjvwk"
     When I open the "Publishing" tab
     And I click the "Close" toolbar button
     Then I should be on the administrator "Articles" page
@@ -70,6 +72,7 @@ Feature: Articles
     Given I am on the administrator "Articles" page
     When I search the list for "Typography"
     Then I should see the row "Typography" in the list
+    And I should not see an empty list
     When I search the list for "qzxjvwk no such article"
     Then I should see an empty list
 

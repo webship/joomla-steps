@@ -15,6 +15,8 @@ Feature: Site search
     Given I am on the homepage
     When I search the site for a word from the first article
     Then I should see that word in the search results
+    When I search the site for "qzxjvwk-no-such-term"
+    Then I should not see that word in the search results
 
   Scenario: Search for a term no article contains
     Given I am on the homepage
