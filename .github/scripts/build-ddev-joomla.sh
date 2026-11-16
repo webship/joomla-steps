@@ -43,7 +43,7 @@ unzip -q joomla.zip -d public
 rm -f joomla.zip
 
 ddev exec "php public/installation/joomla.php install \
-  --site-name=\"Joomla CI\" --admin-user=\"Super User\" --admin-username=\"$ADMIN_USER\" \
+  --site-name=\"Webship Test Site\" --admin-user=\"Super User\" --admin-username=\"$ADMIN_USER\" \
   --admin-password=\"$ADMIN_PASSWORD\" --admin-email=\"admin@example.com\" \
   --db-type=\"mysqli\" --db-host=\"db\" --db-user=\"db\" --db-pass=\"db\" --db-name=\"db\" --db-prefix=\"jos_\" -n"
 

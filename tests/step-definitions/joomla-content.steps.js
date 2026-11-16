@@ -816,7 +816,7 @@ Then(/^the field labelled "([^"]*)?" should( not)* have the value "([^"]*)?"$/, 
  * (found by its legend) to an option. The field can be on a tab that is not
  * open. Save the form afterwards with the toolbar.
  *
- * Example #1: When I set the field labelled "Site Name" to "Joomla Review"
+ * Example #1: When I set the field labelled "Site Name" to "Review Site"
  * Example #2: When I set the field labelled "Site Offline" to "Yes"
  * Example #3: When we set the field labelled "Default List Limit" to "25"
  * Example #4: And I set the field labelled "Title" to "A new title"

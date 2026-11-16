@@ -547,7 +547,7 @@ async function submitSearch(world, term) {
  * through whichever search box is visible: the search module of the page or the
  * form of the search page.
  *
- * Example #1: When I search the site for "joomla"
+ * Example #1: When I search the site for "template"
  * Example #2: When I search the site for "template"
  * Example #3: When we search the site for "articles"
  * Example #4: And I search the site for "blog"
@@ -653,7 +653,7 @@ Then(/^(I |we )*should see no search results$/, async function (pronounCase) {
  * (title, description, type, author, category), not in the sentence that
  * repeats the search term.
  *
- * Example #1: Then I should see "Joomla" in the search results
+ * Example #1: Then I should see "Your Template" in the search results
  * Example #2: And I should see "Template positions" in the search results
  * Example #3: Then I should not see "Checkout" in the search results
  * Example #4: And we should see "Blog" in the search results
@@ -701,7 +701,7 @@ Then(/^(I |we )*should see( at least)* (\d+) search results?$/, async function (
  * Open an entry of the Smart Search result list: the one with the given title,
  * or the first one.
  *
- * Example #1: When I open the search result "Joomla"
+ * Example #1: When I open the search result "Your Template"
  * Example #2: When I open the first search result
  * Example #3: When we open the search result "Your Modules"
  * Example #4: And we open the first search result
@@ -779,7 +779,7 @@ Then(/^(I |we )*should( not)* be on the (404|page not found|403|access denied) p
  * Example #1: Then the page generator should contain "Joomla"
  * Example #2: Then the page generator should start with "Joomla!"
  * Example #3: And the page generator should be "Joomla! - Open Source Content Management"
- * Example #4: Then the page generator should not contain "WordPress"
+ * Example #4: Then the page generator should not contain "Example"
  * Example #5: And page generator should contain "Joomla"
  *
  */
