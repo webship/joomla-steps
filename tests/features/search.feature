@@ -7,8 +7,8 @@ Feature: Site search
 
   Scenario: Search for a term that matches an article
     Given I am on the homepage
-    When I search the site for "joomla"
-    Then I should see "Joomla" in the search results
+    When I search the site for "template"
+    Then I should see "Your Template" in the search results
     And I should see at least 1 search result
 
   Scenario: Search for a word from an article the front page lists
@@ -42,5 +42,5 @@ Feature: Site search
   Scenario: Search on a mobile viewport
     Given I am on the homepage
     When I set the viewport to the "xs" breakpoint
-    And I search the site for "joomla"
-    Then I should see "Joomla" in the search results
+    And I search the site for "template"
+    Then I should see "Your Template" in the search results

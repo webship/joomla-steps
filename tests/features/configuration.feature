@@ -9,16 +9,16 @@ Feature: Global Configuration and system messages
 
   Scenario: The configuration shows the values of the site
     Then I should see the administrator page title "Global Configuration"
-    And the field labelled "Site Name" should have the value "Joomla CI"
+    And the field labelled "Site Name" should have the value "Webship Test Site"
     And the field labelled "Site Offline" should have the value "No"
     And the field labelled "Default Access Level" should have the value "Public"
 
   Scenario: Change the site name, see it in the page title, then restore it
-    When I set the field labelled "Site Name" to "Joomla Review Site"
+    When I set the field labelled "Site Name" to "Review Site"
     And I click the "Save" toolbar button
     Then I should see a success message "Configuration saved"
-    And the field labelled "Site Name" should have the value "Joomla Review Site"
-    When I set the field labelled "Site Name" to "Joomla CI"
+    And the field labelled "Site Name" should have the value "Review Site"
+    When I set the field labelled "Site Name" to "Webship Test Site"
     And I click the "Save & Close" toolbar button
     Then I should see a success message "Configuration saved"
 
