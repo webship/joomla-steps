@@ -327,10 +327,15 @@ that is yours to test.
 
 `npm run test:examples` checks that every `Example #n:` line in the step JSDoc
 matches its own step (and no webship-js core step) and that every feature step is
-defined exactly once. CI runs it before the suite.
+defined exactly once. `npm run test:paths` checks that a feature or a scenario
+named on the command line runs alone. CI runs both before the suite.
 
 ### Lanes, subsets and the settings webship-js reads
 
+- `npx cucumber-js tests/features/blog.feature` runs one feature and
+  `npx cucumber-js tests/features/blog.feature:<line>` one scenario (the line of
+  its `Scenario:`); the paths of `cucumber.js` are left out when the command line
+  names any.
 - `FEATURES=tests/features/a.feature,tests/features/b.feature npm test` runs a
   subset of the feature files; `CUCUMBER_TAGS=@critical npm test` runs a tag lane
   (the default run leaves `@wip` and `@multilingual` out).
