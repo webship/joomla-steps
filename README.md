@@ -122,6 +122,25 @@ The site and the administrator keep separate sessions in Joomla: an account that
 is logged in to the administrator is not logged in to the site. Joomla rejects
 passwords shorter than 12 characters.
 
+## Test users
+
+The accounts this repository's suite logs in as, exactly as `cucumber.js` lists
+them in `worldParameters.users` (the default values; each one can be replaced
+through its variable, see the table above).
+[`.github/scripts/build-ddev-joomla.sh`](.github/scripts/build-ddev-joomla.sh)
+creates them on the local test site, and CI does the same on the runner: the
+installer creates `admin` (Super Users), the Joomla command line the three others.
+They are placeholder credentials of that throwaway site, not of any real one.
+
+```json
+{
+  "admin": { "username": "admin", "password": "Admin123456789!" },
+  "manager": { "username": "manager", "password": "Manager123456789!" },
+  "editor": { "username": "editor", "password": "Editor123456789!" },
+  "member": { "username": "member", "password": "Member123456789!" }
+}
+```
+
 ## A test site
 
 [`.github/scripts/build-ddev-joomla.sh`](.github/scripts/build-ddev-joomla.sh)
