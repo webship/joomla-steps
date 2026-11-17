@@ -22,6 +22,127 @@ suite against it on every push and pull request; see
 > Published to [npmjs.com](https://www.npmjs.com/package/@webship-js/joomla-steps)
 > as `@webship-js/joomla-steps`.
 
+## From nothing to a green run
+
+What the machine needs: Docker, [DDEV](https://ddev.com), git, curl, unzip,
+python3, and Node.js 20 or later with npm. PHP and the database run in DDEV's
+containers.
+
+**1. The Joomla site.** The pack's own build script (the one CI runs) installs
+Joomla with the "blog" sample data in a DDEV project, builds the Smart Search
+index and creates the accounts of [Test users](#test-users); it takes about a
+minute. `JOOMLA_LANGUAGES=fr-FR` adds the French language pack the
+multilingual lane needs.
+
+```bash
+git clone https://github.com/webship/joomla-steps.git
+SITE_DIR="$PWD/joomla-site" joomla-steps/.github/scripts/build-ddev-joomla.sh
+```
+
+The site answers at `https://joomla-ci.ddev.site` (see
+[A test site](#a-test-site) for the other settings of the script). Smart
+Search lists content from the minute after it was published: wait a minute
+after the build before a search.
+
+**2. A test project.**
+
+```bash
+mkdir joomla-tests && cd joomla-tests
+npm init -y
+npm install --save-dev webship-js @webship-js/joomla-steps
+npx init-webship-js
+```
+
+`npx init-webship-js` writes `cucumber.js`, `playwright.config.ts`, the
+`tests/` folders with a first feature and the `npm test` scripts, and installs
+Chromium. npm usually runs it already when it installs webship-js; a second
+run changes nothing.
+
+**3. `cucumber.js`.** Replace the file with the wiring of the pack: the step
+files of webship-js and of the pack, the address of the site, and the accounts
+(the JSON of [Test users](#test-users)).
+
+```javascript
+module.exports = {
+  default: {
+    requireModule: ['tsx/cjs'],
+    require: [
+      'node_modules/webship-js/tests/step-definitions/**/*.js',
+      'node_modules/@webship-js/joomla-steps/tests/step-definitions/*.js',
+      'tests/step-definitions/**/*.js',
+    ],
+    paths: ['tests/features/**/*.feature'],
+    format: ['@cucumber/pretty-formatter', 'json:tests/reports/cucumber_report.json'],
+    worldParameters: {
+      launchUrl: process.env.LAUNCH_URL || 'https://joomla-ci.ddev.site',
+      // The waits webship-js adds around each page, scenario and step (milliseconds).
+      minWaitTime: { page: 3000, before_scenario: 0, after_scenario: 0, before_step: 0, after_step: 0 },
+      users: {
+        admin: { username: 'admin', password: 'Admin123456789!' },
+        manager: { username: 'manager', password: 'Manager123456789!' },
+        editor: { username: 'editor', password: 'Editor123456789!' },
+        member: { username: 'member', password: 'Member123456789!' },
+      },
+    },
+  },
+};
+```
+
+**4. A first feature**, `tests/features/first-run.feature`:
+
+```gherkin
+Feature: First run
+  Scenario: A Super User logs in to the administrator
+    Given I am a logged in user with the "admin" user
+    Then I should see the administrator dashboard
+
+  Scenario: A visitor reads an article from the home page
+    Given I am on the homepage
+    When I read more of "Millions"
+    Then I should be viewing the "Millions" article
+```
+
+**5. Run it.**
+
+```bash
+npm test
+```
+
+A green first run prints every step, then the summary (the starter feature of
+`npx init-webship-js` and the two scenarios above, passed) and the HTML report
+it wrote:
+
+```
+3 scenarios (3 passed)
+7 steps (7 passed)
+0m06.000s (executing steps: 0m05.900s)
+[webship-js] HTML report → …/tests/reports/cucumber_report.html
+```
+
+From there, copy the features of [`tests/features/`](tests/features/) (they
+also ship in the package, under
+`node_modules/@webship-js/joomla-steps/tests/features/`): together they use
+every step of the pack, in both readings where a step reads both ways.
+
+### What the suite tests
+
+The features of this repository run every step of the pack against the
+sample-data site, in CI on every change (the multilingual feature as a lane of
+its own): logging in to and out of the site and the administrator, refused
+logins, the password reset and username reminder pages, a Super User's and a
+Manager's dashboard, menu and toolbar, the menus and the mobile menu of the
+site, the blog and its articles, breadcrumbs, articles (create, publish,
+feature, archive, trash, delete, the editor, the form), categories, menus and
+menu items, site modules, the Media Manager, users, groups and access levels,
+the Global Configuration, extensions and plugins, caches and global check-in,
+Smart Search, the 404 and 403 pages, the generator, a multilingual site with
+its language switcher, and an accessibility audit.
+
+Not tested: contacts, banners, news feeds and private messages, workflows,
+the template styles and their options, the installation and update of
+extensions, user registration and the creation of accounts (the suite never
+creates accounts), and e-mail.
+
 ## Requirements
 
 - Node.js 20 or later
