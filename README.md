@@ -44,6 +44,25 @@ The site answers at `https://joomla-ci.ddev.site` (see
 Search lists content from the minute after it was published: wait a minute
 after the build before a search.
 
+In the [Webship Workspace](https://github.com/webship/workspace), its Joomla
+plugin builds the site instead, with the same blog sample data and Smart Search
+index, in a sites folder of the workspace (`test/` here; `dev/`, `sandboxes/`
+and `demos/` work the same):
+
+```bash
+bash core/scripts/plugins.sh --require joomla --with-needs
+bash core/scripts/plugins.sh --activate joomla --with-needs
+bash core/scripts/plugins.sh --install joomla
+bash test/cmd-joomla-project.sh mysite --install --add-users --sample-data
+```
+
+That site answers at `https://mysite.ddev.site`. Its accounts are the plugin's
+(`administrator`, a Super User, `manager`, `editor` and `member`, each with the
+password `dD.123123ddd`; step 3 names them). The features of
+[`tests/features/`](tests/features/) pass there too, but for seven lines
+that name what the script makes: the account `admin`, the display names of its
+accounts, its one Super User and its site name.
+
 **2. A test project.**
 
 ```bash
@@ -72,6 +91,8 @@ module.exports = {
       'tests/step-definitions/**/*.js',
     ],
     paths: ['tests/features/**/*.feature'],
+    // The multilingual feature changes every address of the site: a lane of its own, CUCUMBER_TAGS=@multilingual.
+    tags: process.env.CUCUMBER_TAGS || 'not @multilingual',
     format: ['@cucumber/pretty-formatter', 'json:tests/reports/cucumber_report.json'],
     worldParameters: {
       launchUrl: process.env.LAUNCH_URL || 'https://joomla-ci.ddev.site',
@@ -87,6 +108,11 @@ module.exports = {
   },
 };
 ```
+
+On a site from the Webship Workspace (step 1), the accounts are the plugin's:
+`admin: { username: 'administrator', password: 'dD.123123ddd' }`, and
+`manager`, `editor` and `member` with the same password. Its address goes in
+`LAUNCH_URL` (step 5).
 
 **4. A first feature**, `tests/features/first-run.feature`:
 
@@ -108,6 +134,7 @@ Feature: First run
 npm test
 ```
 
+(`LAUNCH_URL=https://mysite.ddev.site npm test` for a site at another address.)
 A green first run prints every step, then the summary (the starter feature of
 `npx init-webship-js` and the two scenarios above, passed) and the HTML report
 it wrote:
@@ -121,8 +148,11 @@ it wrote:
 
 From there, copy the features of [`tests/features/`](tests/features/) (they
 also ship in the package, under
-`node_modules/@webship-js/joomla-steps/tests/features/`): together they use
-every step of the pack, in both readings where a step reads both ways.
+`node_modules/@webship-js/joomla-steps/tests/features/`), with the file
+`tests/fixtures/pixel.png` the media feature uploads: together they use every
+step of the pack, in both readings where a step reads both ways. The
+multilingual feature runs alone, on a site with the French language pack:
+`CUCUMBER_TAGS=@multilingual npm test`.
 
 ### What the suite tests
 
