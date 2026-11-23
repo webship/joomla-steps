@@ -25,7 +25,7 @@ suite against it on every push and pull request; see
 ## From nothing to a green run
 
 What the machine needs: Docker, [DDEV](https://ddev.com), git, curl, unzip,
-python3, and Node.js 20 or later with npm. PHP and the database run in DDEV's
+python3, and Node.js 24 or later with npm. PHP and the database run in DDEV's
 containers.
 
 **1. The Joomla site.** The pack's own build script (the one CI runs) installs
@@ -175,7 +175,7 @@ creates accounts), and e-mail.
 
 ## Requirements
 
-- Node.js 20 or later
+- Node.js 24 or later
 - A webship-js 2.0 test project
 - A Joomla 5 or 6 site to test, with the Cassiopeia (site) and Atum
   (administrator) templates
